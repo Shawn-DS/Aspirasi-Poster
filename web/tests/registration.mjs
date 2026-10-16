@@ -1,0 +1,45 @@
+import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+import { build } from "esbuild";
+
+async function importSource(path) {
+  const result = await build({ entryPoints: [path], bundle: true, write: false, format: "esm", platform: "node" });
+  return import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString("base64")}`);
+}
+const { registerParticipant } = await importSource("features/registration/server.ts");
+const { normalizeStudentId } = await importSource("features/registration/validation.ts");
+assert.equal(normalizeStudentId("  ab-123  "),"AB-123");
+for (const value of [null,123,{}," ","a".repeat(81),"ID\n123","ID\u200b123"]) assert.equal(normalizeStudentId(value),null);
+assert.equal(normalizeStudentId("😀".repeat(80)),"😀".repeat(80));
+const sqlite = new DatabaseSync(":memory:");
+for (const file of readdirSync("drizzle").filter(name=>name.endsWith(".sql")).sort()) sqlite.exec(readFileSync(`drizzle/${file}`,"utf8"));
+const binding = { prepare: query => ({ bind: (...args) => ({ run: async () => { sqlite.prepare(query).run(...args); return { success:true }; } }) }) };
+const req = (body, options={}) => new Request("https://test.example/api/join", { method:"POST", headers:{origin:"https://test.example","content-type":"application/json",...options.headers}, body: typeof body === "string" ? body : JSON.stringify(body) });
+assert.equal((await registerParticipant(req({studentId:"   "}),binding)).status,400);
+assert.equal((await registerParticipant(req({studentId:"ab123",choices:[1]}),binding)).status,400);
+assert.equal((await registerParticipant(req({studentId:"ab123"},{headers:{origin:"https://evil.example"}}),binding)).status,403);
+assert.equal((await registerParticipant(req({studentId:"ab123"},{headers:{"content-type":"text/plain"}}),binding)).status,415);
+assert.equal((await registerParticipant(req("{broken"),binding)).status,400);
+assert.equal((await registerParticipant(req({studentId:"x".repeat(2000)}),binding)).status,413);
+assert.equal((await registerParticipant(new Request("https://test.example/api/join"),binding)).status,405);
+assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM participants").get().n,0);
+assert.equal((await registerParticipant(req({studentId:"AB123"}))).status,503);
+const failed = await registerParticipant(req({studentId:"AB123"}),{prepare:()=>{throw new Error("private internal database details");}});
+assert.equal(failed.status,503);
+assert.doesNotMatch(await failed.text(),/private internal/);
+const first = await registerParticipant(req({studentId:" ab123 "}),binding);
+assert.equal(first.status,200);
+assert.equal(first.headers.get("cache-control"),"no-store");
+assert.deepEqual(await first.json(),{ok:true});
+sqlite.prepare("UPDATE participants SET joined_at = '2026-01-01T00:00:00.000Z'").run();
+const retries = await Promise.all(Array.from({length:10},()=>registerParticipant(req({studentId:"Ab123"}),binding)));
+for (const retry of retries) assert.deepEqual(await retry.json(),{ok:true});
+assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM participants").get().n,1);
+assert.equal(sqlite.prepare("SELECT joined_at FROM participants").get().joined_at,"2026-01-01T00:00:00.000Z");
+const sqlText = "x'); DROP TABLE participants;--";
+assert.equal((await registerParticipant(req({studentId:sqlText}),binding)).status,200);
+assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM participants").get().n,2);
+assert.deepEqual(sqlite.prepare("PRAGMA table_info(participants)").all().map(col=>col.name),["student_id","joined_at"]);
+sqlite.close();
+console.log("PASS: real SQLite migration, student-ID validation, bounded bodies, same-origin writes, duplicate/concurrent retries, original join time, SQL parameters, no answer storage, no public reads, and safe database failures.");
