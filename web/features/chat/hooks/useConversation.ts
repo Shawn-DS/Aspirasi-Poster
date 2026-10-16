@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useReducer } from "react";
-import { conversationReducer, initialConversation, messageDelay } from "../lib/conversation";
+import { conversationReducer, getEthicsProfile, initialConversation, messageDelay } from "../lib/conversation";
 import { steps } from "../data/story";
 
 function timeNow() {
@@ -25,6 +25,8 @@ export function useConversation() {
     complete: state.turn === steps.length && state.queue.length === 0,
     step: steps[Math.min(state.turn, steps.length - 1)], totalSteps: steps.length,
     hasAmir: state.messages.some(message => message.sender === "amir"),
+    counts: state.counts,
+    ethicsProfile: getEthicsProfile(state.counts),
     ending: state.ending,
     send: (text: string) => dispatch({ type: "send", text, time: timeNow() }),
     restart: () => dispatch({ type: "restart" }),

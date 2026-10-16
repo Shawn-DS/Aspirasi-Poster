@@ -68,7 +68,7 @@ function InvitationForm({ onJoined }: { onJoined: () => void }) {
           {error && <p id="join-error" className="join-error" role="alert">{error}</p>}
           <button className="join-button" type="submit" disabled={pending}>{pending ? <><LoaderCircle className="join-spinner" size={19} />Sedang menyertai…</> : <>Join Group<ArrowRight size={19} /></>}</button>
         </form>
-        <p className="join-footnote"><Check size={13} />7 pilihan · Sekitar 2 minit</p>
+        <p className="join-footnote"><Check size={13} />8 dilema etika · Deontologi, Utilitarianisme &amp; Care</p>
       </div>
     </section><p className="join-disclosure">Simulasi perbualan rekaan untuk aktiviti MPU1032.<br />{group.subject}</p></div>
   </main>;

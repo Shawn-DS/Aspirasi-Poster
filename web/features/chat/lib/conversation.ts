@@ -1,10 +1,26 @@
-import { opening, openingReflections, steps } from "../data/story";
-import type { ConversationAction, ConversationState } from "../types";
+import { ethicsProfiles, opening, openingReflections, steps } from "../data/story";
+import type { ConversationAction, ConversationState, EthicsCounts, EthicsLens, EthicsProfile } from "../types";
 
 export const MAX_MESSAGE_LENGTH = 500;
+const LENSES: EthicsLens[] = ["deontology", "utilitarianism", "care"];
+
+export function getEthicsProfile(counts: EthicsCounts): EthicsProfile {
+  const max = Math.max(counts.deontology, counts.utilitarianism, counts.care);
+  if (max === 0) return ethicsProfiles.balanced;
+  const top = LENSES.filter(lens => counts[lens] === max);
+  return top.length === 1 ? ethicsProfiles[top[0]] : ethicsProfiles.balanced;
+}
 
 export function initialConversation(): ConversationState {
-  return { messages: [], queue: [...opening], turn: 0, nextId: 1, firstChoice: null, ending: null };
+  return {
+    messages: [],
+    queue: [...opening],
+    turn: 0,
+    nextId: 1,
+    firstChoice: null,
+    counts: { deontology: 0, utilitarianism: 0, care: 0 },
+    ending: null,
+  };
 }
 
 export function conversationReducer(state: ConversationState, action: ConversationAction): ConversationState {
@@ -20,10 +36,17 @@ export function conversationReducer(state: ConversationState, action: Conversati
   const step = steps[state.turn];
   const choice = step.choices.find(option => option.text === text);
   const firstChoice = state.turn === 0 ? choice?.id ?? null : state.firstChoice;
+  const counts = choice ? { ...state.counts, [choice.lens]: state.counts[choice.lens] + 1 } : state.counts;
   const queue = [...(choice?.replies ?? step.fallback), ...(step.transition ?? [])];
   if (steps[turn]) queue.push(steps[turn].prompt);
   else if (firstChoice && openingReflections[firstChoice]) queue.push(openingReflections[firstChoice]);
-  return { ...state, turn, firstChoice, ending: choice?.ending ?? null, nextId: state.nextId + 1,
+  return {
+    ...state,
+    turn,
+    firstChoice,
+    counts,
+    ending: choice?.ending ?? null,
+    nextId: state.nextId + 1,
     messages: [...state.messages, { id: state.nextId, sender: "you", text, time: action.time }],
     queue,
   };

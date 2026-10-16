@@ -2,7 +2,7 @@
 import { useEffect, useState, type RefObject } from "react";
 import { viewportGeometry } from "../lib/viewport";
 
-export function useChatViewport(root: RefObject<HTMLElement | null>, input: RefObject<HTMLInputElement | HTMLTextAreaElement | null>) {
+export function useChatViewport(root: RefObject<HTMLElement | null>, input?: RefObject<HTMLInputElement | HTMLTextAreaElement | null>) {
   const [view, setView] = useState({ keyboardOpen: false, height: 0 });
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -10,7 +10,7 @@ export function useChatViewport(root: RefObject<HTMLElement | null>, input: RefO
     let width = window.innerWidth;
     let settleTimer = 0;
     function update() {
-      const focused = document.activeElement === input.current;
+      const focused = Boolean(input?.current && document.activeElement === input.current);
       if (Math.abs(window.innerWidth - width) > 50) {
         width = window.innerWidth;
         baselineHeight = Math.max(window.innerHeight, viewport?.height ?? 0);
@@ -29,7 +29,7 @@ export function useChatViewport(root: RefObject<HTMLElement | null>, input: RefO
       window.clearTimeout(settleTimer);
       settleTimer = window.setTimeout(() => {
         // Let the native keyboard animation settle, then discard any page pan.
-        if (document.activeElement !== input.current && window.matchMedia("(max-width: 600px)").matches) window.scrollTo(0, 0);
+        if ((!input?.current || document.activeElement !== input.current) && window.matchMedia("(max-width: 600px)").matches) window.scrollTo(0, 0);
         schedule();
       }, 350);
     }
