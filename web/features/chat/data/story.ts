@@ -24,35 +24,35 @@ export const communityProfiles = [
 ] satisfies { sender: SenderId; role: string; description: string }[];
 
 export const ethicsLensMeta: Record<EthicsLens, { name: string; subtitle: string }> = {
-  deontology: { name: "Deontologi", subtitle: "Prinsip, Hak & Keadilan" },
-  utilitarianism: { name: "Utilitarianisme", subtitle: "Keselamatan & Majoriti" },
+  deontology: { name: "Deontologi", subtitle: "Prinsip & Hak" },
+  utilitarianism: { name: "Utilitarianisme", subtitle: "Majoriti & Keselamatan" },
   care: { name: "Ethics of Care", subtitle: "Empati & Hubungan" },
 };
 
 export const ethicsProfiles: Record<EthicsProfileId, EthicsProfile> = {
   deontology: {
     id: "deontology",
-    badge: "Kecenderungan Utama · Etika Deontologi",
-    title: "Penjaga Prinsip dan Hak Setara.",
-    summary: "Anda membuat keputusan berasaskan prinsip moral sejagat, peraturan yang sama rata dan penghormatan terhadap hak individu. Bagi anda, maruah, privasi serta anggapan tidak bersalah ialah kewajipan yang tidak boleh dikorbankan walaupun wujud rasa bimbang.",
+    badge: "Etika Deontologi",
+    title: "Penjaga Prinsip dan Hak Setara",
+    summary: "Anda mengutamakan prinsip keadilan, peraturan yang sama rata dan hak setiap individu.",
   },
   utilitarianism: {
     id: "utilitarianism",
-    badge: "Kecenderungan Utama · Etika Utilitarianisme",
-    title: "Pengimbang Kesejahteraan dan Harmoni Majoriti.",
-    summary: "Anda menilai setiap dilema berdasarkan kesan praktikal kepada keseluruhan komuniti. Anda mengutamakan ketenteraman, rasa selamat majoriti penduduk dan langkah berperingkat supaya integrasi semula berjalan tanpa mencetuskan panik.",
+    badge: "Etika Utilitarianisme",
+    title: "Pengimbang Harmoni dan Majoriti",
+    summary: "Anda mengutamakan keselamatan, ketenteraman dan kesejahteraan majoriti penduduk.",
   },
   care: {
     id: "care",
-    badge: "Kecenderungan Utama · Ethics of Care",
-    title: "Pembina Jambatan Empati dan Keprihatinan.",
-    summary: "Anda meletakkan hubungan kemanusiaan, kesediaan mendengar dan rasa prihatin sebagai teras etika. Anda bukan sekadar melihat peraturan atau perkiraan majoriti, tetapi hadir menemani jiran untuk membina semula kepercayaan.",
+    badge: "Ethics of Care",
+    title: "Pembina Jambatan Empati",
+    summary: "Anda mengutamakan empati, hubungan manusiawi dan sokongan untuk membina kepercayaan.",
   },
   balanced: {
     id: "balanced",
-    badge: "Kecenderungan Seimbang · Perspektif Menyeluruh",
-    title: "Pertimbangan Etika yang Seimbang.",
-    summary: "Anda menggabungkan prinsip hak individu (Deontologi), kesejahteraan majoriti (Utilitarianisme) dan hubungan empati (Ethics of Care) mengikut konteks situasi tanpa berpihak secara ekstrem kepada satu aliran sahaja.",
+    badge: "Perspektif Seimbang",
+    title: "Pertimbangan Etika Seimbang",
+    summary: "Anda mengimbangi hak individu, keselamatan komuniti dan empati mengikut situasi.",
   },
 };
 
@@ -257,16 +257,16 @@ export const openingReflections: Record<string, MessageDraft> = {
 };
 
 export const copy = {
-  title: "Satu mesej.", titleAccent: "Satu peluang kedua.",
-  intro: "Masuk ke perbualan kejiranan. Terokai 8 dilema etika antara prinsip hak (Deontologi), kesejahteraan majoriti (Utilitarianisme) dan hubungan empati (Ethics of Care).",
-  badge: "SIMULASI DILEMA ETIKA", duration: "8 dilema etika · Tiada betul atau salah · ~3 minit", privacy: "Tiada rekod jawapan atau perbualan",
-  simulation: "Kisah rekaan · 8 dilema etika (Deontologi · Utilitarianisme · Care)", today: "HARI INI", promptEnd: "Refleksi Perspektif Etika",
+  title: "Peluang Kedua", titleAccent: "Dalam Kejiranan Kita",
+  intro: "Sertai perbualan kejiranan dan terokai 8 dilema etika melalui prinsip hak (Deontologi), kesejahteraan majoriti (Utilitarianisme) dan hubungan empati (Ethics of Care).",
+  badge: "SIMULASI DILEMA ETIKA", duration: "8 dilema etika (~3 minit)", privacy: "Tiada rekod jawapan atau perbualan",
+  simulation: "Simulasi 8 dilema etika komuniti", today: "HARI INI", promptEnd: "Refleksi Perspektif Etika",
   stepEnd: "SELESAI", placeholder: "Tulis mesej…", send: "Hantar mesej", typing: "sedang menaip…", waiting: "Dengar dahulu, kemudian pilih pendirian anda.",
   newMessages: "Mesej baharu", restart: "Mulakan semula", suggestions: "Pilih pendekatan etika anda", showSuggestions: "Lihat cadangan",
   ethicsResultLabel: "PROFIL PERTIMBANGAN ETIKA ANDA",
   endTitle: "Satu perbualan ialah permulaan.", endText: "Setiap dilema etika menuntut kita menimbang antara hak individu, keselamatan komuniti dan hubungan sesama manusia.", endNote: "Memahami pelbagai sudut etika membantu kita membina masyarakat yang lebih adil dan berihsan.",
-  footer: "MPU1032 · ASPIRASI NEGARA BANGSA",
-  about: "Kenali Taman Harmoni", close: "Tutup", aboutText: "Seorang jiran baharu. Lapan dilema etika tanpa jawapan mudah. Lihat bagaimana Deontologi, Utilitarianisme dan Ethics of Care membentuk keputusan komuniti.",
-  aboutSubtitle: "Satu kejiranan. Tiga perspektif etika.", announcementLabel: "PENGUMUMAN KOMUNITI", announcement: "Di sini, setiap pandangan dibincangkan dengan tenang antara prinsip keadilan, kesejahteraan bersama dan empati.",
-  peopleLabel: "KENALI JIRAN ANDA", communityQuestion: "Bagaimana kita mengimbangi hak individu, keselamatan ramai dan rasa prihatin?", backToChat: "Kembali ke perbualan", simulationNote: "Kisah rekaan · Balasan pratulis · Tiada rekod perbualan",
+  footer: "MPU1032 ASPIRASI NEGARA BANGSA",
+  about: "Kenali Taman Harmoni", close: "Tutup", aboutText: "Kenali jiran baharu kita dan lihat bagaimana Deontologi, Utilitarianisme serta Ethics of Care membentuk keputusan komuniti dalam lapan dilema etika.",
+  aboutSubtitle: "Tiga perspektif etika dalam komuniti kejiranan", announcementLabel: "PENGUMUMAN KOMUNITI", announcement: "Di sini, setiap pandangan dibincangkan dengan tenang antara prinsip keadilan, kesejahteraan bersama dan empati.",
+  peopleLabel: "KENALI JIRAN ANDA", communityQuestion: "Bagaimana kita mengimbangi hak individu, keselamatan ramai dan rasa prihatin?", backToChat: "Kembali ke perbualan", simulationNote: "Simulasi perbualan interaktif tanpa rekod jawapan",
 };

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, interactiveWidget: "resizes-content", themeColor: "#075e54" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, maximumScale: 1, userScalable: false, interactiveWidget: "resizes-content", themeColor: "#075e54" };
 
 export default function RootLayout({
   children,

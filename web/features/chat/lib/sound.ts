@@ -8,6 +8,7 @@ class SoundController {
   private active = false;
   private muted = false;
   private visibilityBound = false;
+  private unlockBound = false;
 
   private ensureContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
@@ -25,13 +26,30 @@ class SoundController {
     return this.ctx;
   }
 
+  private bindUnlockListeners() {
+    if (this.unlockBound || typeof window === "undefined") return;
+    this.unlockBound = true;
+    const resumeAudio = () => {
+      if (!this.active || this.muted) return;
+      this.ensureContext();
+      if (this.bgm && this.bgm.paused) {
+        this.bgm.play().catch(() => {});
+      }
+    };
+    window.addEventListener("pointerdown", resumeAudio, { passive: true });
+    window.addEventListener("touchstart", resumeAudio, { passive: true });
+    window.addEventListener("keydown", resumeAudio, { passive: true });
+    window.addEventListener("click", resumeAudio, { passive: true });
+  }
+
   private ensureBgm(): HTMLAudioElement | null {
     if (typeof window === "undefined") return null;
+    this.bindUnlockListeners();
     if (!this.bgm) {
       const audio = new Audio("/bgm.mp3");
       audio.loop = true;
       audio.preload = "auto";
-      audio.volume = 0.38;
+      audio.volume = 0.14;
       audio.muted = this.muted;
       this.bgm = audio;
     }
@@ -84,12 +102,11 @@ class SoundController {
   }
 
   startBgm(mode: "thinking" | "complete" = "thinking") {
-    this.ensureContext();
     this.active = true;
     const bgm = this.ensureBgm();
     if (bgm) {
       bgm.muted = this.muted;
-      bgm.volume = mode === "complete" ? 0.28 : 0.38;
+      bgm.volume = mode === "complete" ? 0.1 : 0.14;
       if (!this.muted && bgm.paused) {
         bgm.play().catch(() => {});
       }

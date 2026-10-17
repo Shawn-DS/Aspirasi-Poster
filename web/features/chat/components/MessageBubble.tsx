@@ -1,4 +1,4 @@
-import { CheckCheck } from "lucide-react";
+import { CheckCheck, UserPlus } from "lucide-react";
 import type { WordLookupResult } from "../data/dictionary";
 import { people } from "../data/story";
 import type { ChatMessage } from "../types";
@@ -17,10 +17,19 @@ export default function MessageBubble({
   onSelectWord: (id: string, lookup: WordLookupResult, target: HTMLElement) => void;
 }) {
   if (message.sender === "system") {
+    const isAmirArrival = message.text.includes("menambah Amir");
     return (
-      <div className="system-message">
+      <div className={`system-message${isAmirArrival ? " amir-arrival" : ""}`}>
         <span>
-          <TranslatableText text={message.text} prefixId={`sys-${message.id}`} activeId={activeWordId} onSelectWord={onSelectWord} />
+          {isAmirArrival && (
+            <i className="amir-arrival-badge" aria-hidden="true">
+              <Avatar sender="amir" />
+              <UserPlus size={12} />
+            </i>
+          )}
+          <span>
+            <TranslatableText text={message.text} prefixId={`sys-${message.id}`} activeId={activeWordId} onSelectWord={onSelectWord} />
+          </span>
         </span>
       </div>
     );

@@ -8,6 +8,7 @@ import { sound } from "./lib/sound";
 import { useConversation } from "./hooks/useConversation";
 import { useChatViewport } from "./hooks/useChatViewport";
 import Avatar from "./components/Avatar";
+import EthicsSticker from "./components/EthicsSticker";
 import MessageBubble from "./components/MessageBubble";
 import TypingIndicator from "./components/TypingIndicator";
 import ReplyChoices from "./components/ReplyChoices";
@@ -42,7 +43,7 @@ export default function ChatSimulator() {
 
   useEffect(() => {
     if (!effect) return;
-    const timer = window.setTimeout(() => setEffect(null), 980);
+    const timer = window.setTimeout(() => setEffect(null), 1120);
     return () => window.clearTimeout(timer);
   }, [effect]);
 
@@ -126,6 +127,9 @@ export default function ChatSimulator() {
         <span className="chapter-dot" />
         <span className="chapter-title">{chat.complete ? copy.promptEnd : chat.step.title}</span>
         <small>{chat.complete ? copy.stepEnd : `${Math.min(chat.turn + 1, chat.totalSteps)} / ${chat.totalSteps}`}</small>
+        <div className="chapter-progress" aria-hidden="true">
+          <i style={{ width: `${chat.complete ? 100 : Math.round(((chat.turn + 1) / chat.totalSteps) * 100)}%` }} />
+        </div>
       </div>
       <div className="chat-body" ref={scroller} onScroll={() => { if (activeWord) setActiveWord(null); const el = scroller.current!; nearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60; if (nearBottom.current) setUnread(0); }}>
         <div className="date-divider"><span>{copy.today}</span></div><div className="simulation-note"><ShieldCheck size={12} />{copy.simulation}</div>
@@ -135,12 +139,17 @@ export default function ChatSimulator() {
         </div>
         {chat.typing && <TypingIndicator sender={chat.typing} />}
         {chat.complete && <section className={`reflection-card profile-${chat.ethicsProfile.id}`} aria-labelledby="reflection-title">
-          <span className="reflection-icon"><Scale size={21} /></span>
-          <p className="eyebrow">REFLEKSI DILEMA ETIKA</p>
+          <div className="reflection-drip" aria-hidden="true">
+            <svg viewBox="0 0 400 28" preserveAspectRatio="none">
+              <path d="M0 0 H400 V12 C382 12 376 26 360 26 C344 26 340 10 322 10 C304 10 298 24 280 24 C262 24 256 11 238 11 C220 11 214 27 196 27 C178 27 172 10 154 10 C136 10 130 25 112 25 C94 25 88 11 70 11 C52 11 46 24 28 24 C12 24 8 12 0 12 Z" />
+            </svg>
+          </div>
+          <div className="reflection-mascot-wrap">
+            <EthicsSticker type={chat.ethicsProfile.id} size={96} className="reflection-mascot" />
+          </div>
+          <p className="reflection-ethics-badge">{chat.ethicsProfile.badge}</p>
           <h2 id="reflection-title"><TranslatableText text={chat.ethicsProfile.title} prefixId="ref-title" activeId={activeWord?.id} onSelectWord={selectWord} /></h2>
           <div className="reflection-ethics">
-            <p className="reflection-ethics-head">{copy.ethicsResultLabel}</p>
-            <p className="reflection-ethics-badge">{chat.ethicsProfile.badge}</p>
             <ul className="ethics-breakdown" aria-label={copy.ethicsResultLabel}>
               {LENS_ORDER.map(lens => {
                 const count = chat.counts[lens];
@@ -156,8 +165,6 @@ export default function ChatSimulator() {
             </ul>
             <p className="reflection-ethics-summary"><TranslatableText text={chat.ethicsProfile.summary} prefixId="ref-sum" activeId={activeWord?.id} onSelectWord={selectWord} /></p>
           </div>
-          <p><TranslatableText text={chat.ending?.text ?? copy.endText} prefixId="ref-end" activeId={activeWord?.id} onSelectWord={selectWord} /></p>
-          <blockquote><TranslatableText text={copy.endNote} prefixId="ref-note" activeId={activeWord?.id} onSelectWord={selectWord} /></blockquote>
           <button onClick={restart}><RotateCcw size={15} />{copy.restart}</button>
         </section>}
       </div>
@@ -180,9 +187,21 @@ export default function ChatSimulator() {
         <div className="word-popover-row"><span className="word-lang-badge en">EN</span><span>{activeWord.lookup.en}</span></div>
       </div>}
       {effect && <div key={effect.key} className={`choice-effect lens-${effect.lens}`} aria-hidden="true">
-        {effect.lens === "deontology" && <div className="effect-stamp"><span className="stamp-shockwave" /><div className="stamp-seal"><Scale size={30} /></div></div>}
-        {effect.lens === "utilitarianism" && <div className="effect-ripple"><span className="ripple-ring r1" /><span className="ripple-ring r2" /><span className="ripple-ring r3" /><div className="ripple-core"><Users size={26} /></div></div>}
-        {effect.lens === "care" && <div className="effect-care-box"><span className="care-aura" /><div className="care-center"><Heart size={28} /></div><span className="care-float f1"><Heart size={15} /></span><span className="care-float f2"><Heart size={18} /></span><span className="care-float f3"><Heart size={14} /></span></div>}
+        <div className={`sticker-burst-stage burst-${effect.lens}`}>
+          <span className="burst-halo" />
+          <span className="burst-particle p1" />
+          <span className="burst-particle p2" />
+          <span className="burst-particle p3" />
+          <span className="burst-particle p4" />
+          <span className="burst-particle p5" />
+          <span className="burst-particle p6" />
+          <div className="burst-sticker-pop">
+            <EthicsSticker type={effect.lens} size={118} />
+            <span className="burst-sticker-tag">
+              {effect.lens === "deontology" ? "⚖️ DEONTOLOGI" : effect.lens === "utilitarianism" ? "🌟 UTILITARIANISME" : "💖 ETHICS OF CARE"}
+            </span>
+          </div>
+        </div>
       </div>}
       {unread > 0 && <button className="new-messages" onClick={scrollToNew}><ArrowDown size={15} />{copy.newMessages}<span>{unread}</span></button>}
       <footer className="chat-composer">
