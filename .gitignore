@@ -1,4 +1,2 @@
-# Separate Sites source checkout and deployment artifacts.
-/.sites-deploy/
 # Exported participant lists contain student IDs; never commit them.
 /output/participants/
