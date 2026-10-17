@@ -26,6 +26,7 @@ export function useConversation() {
     step: steps[Math.min(state.turn, steps.length - 1)], totalSteps: steps.length,
     hasAmir: state.messages.some(message => message.sender === "amir"),
     counts: state.counts,
+    lastLens: state.lastLens,
     ethicsProfile: getEthicsProfile(state.counts),
     ending: state.ending,
     send: (text: string) => dispatch({ type: "send", text, time: timeNow() }),

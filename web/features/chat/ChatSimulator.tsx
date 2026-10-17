@@ -1,7 +1,9 @@
 "use client";
-import { useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowLeft, Check, Clock3, Info, Leaf, MessageCircle, RotateCcw, Scale, ShieldCheck, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ArrowDown, ArrowLeft, Check, Clock3, Heart, Info, Leaf, MessageCircle, RotateCcw, Scale, ShieldCheck, Users, Volume2, VolumeX, X } from "lucide-react";
 import { communityProfiles, copy, ethicsLensMeta, group, people } from "./data/story";
+import { LENS_VIBRATION } from "./lib/conversation";
+import { sound } from "./lib/sound";
 import { useConversation } from "./hooks/useConversation";
 import { useChatViewport } from "./hooks/useChatViewport";
 import Avatar from "./components/Avatar";
@@ -15,6 +17,8 @@ const LENS_ORDER: EthicsLens[] = ["deontology", "utilitarianism", "care"];
 export default function ChatSimulator() {
   const chat = useConversation();
   const [unread, setUnread] = useState(0);
+  const [muted, setMuted] = useState(() => sound.isMuted());
+  const [effect, setEffect] = useState<{ lens: EthicsLens; key: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -23,30 +27,66 @@ export default function ChatSimulator() {
   const canSend = !chat.busy && !chat.complete;
   const { height: visibleHeight } = useChatViewport(root);
 
+  useEffect(() => {
+    sound.startBgm(chat.complete ? "complete" : "thinking");
+  }, [chat.complete]);
+
+  useEffect(() => {
+    return () => sound.stopBgm();
+  }, []);
+
+  useEffect(() => {
+    if (!effect) return;
+    const timer = window.setTimeout(() => setEffect(null), 980);
+    return () => window.clearTimeout(timer);
+  }, [effect]);
+
   useLayoutEffect(() => {
     const el = scroller.current;
     if (!el) return;
     const added = Math.max(0, chat.messages.length - lastCount.current);
+    const newest = chat.messages.at(-1);
+    if (added && newest && newest.sender !== "you" && newest.sender !== "system") {
+      sound.playMessagePop();
+    }
     lastCount.current = chat.messages.length;
     if (nearBottom.current) { el.scrollTop = el.scrollHeight; setUnread(0); }
     else if (added) setUnread(n => n + added);
   }, [chat.messages, chat.typing, chat.complete, visibleHeight]);
 
+  function toggleMute() {
+    const next = !muted;
+    setMuted(next);
+    sound.setMuted(next);
+    if (!next) sound.startBgm(chat.complete ? "complete" : "thinking");
+  }
+
   function choose(text: string) {
     if (!canSend) return;
+    sound.startBgm("thinking");
+    const matched = chat.step.choices.find(option => option.text === text);
+    if (matched) {
+      setEffect({ lens: matched.lens, key: chat.turn + 1 });
+      sound.playChoiceSfx(matched.lens);
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches && typeof navigator !== "undefined" && "vibrate" in navigator) {
+        try { navigator.vibrate(LENS_VIBRATION[matched.lens]); } catch {}
+      }
+    }
     nearBottom.current = true;
     chat.send(text);
   }
   function restart() {
     nearBottom.current = true; lastCount.current = 0;
-    setUnread(0); chat.restart();
+    setUnread(0); setEffect(null);
+    sound.startBgm("thinking");
+    chat.restart();
   }
   function scrollToNew() {
     nearBottom.current = true; setUnread(0);
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "instant" });
   }
 
-  return <main className="experience" ref={root}>
+  return <main className="experience" ref={root} onPointerDown={() => { if (!muted) sound.startBgm(chat.complete ? "complete" : "thinking"); }}>
     <section className="story-panel" aria-labelledby="project-title">
       <a className="project-brand" href="/"><span><MessageCircle size={22} /></span>peluang<span className="brand-light">kedua</span><i /></a>
       <div className="story-heading"><p className="eyebrow"><span />{copy.badge}</p><h1 id="project-title">{copy.title}<br /><em>{copy.titleAccent}</em></h1><p className="story-description">{copy.intro}</p><div className="duration"><Clock3 size={16} />{copy.duration}<span />{copy.privacy}</div></div>
@@ -54,8 +94,8 @@ export default function ChatSimulator() {
       <div className="project-note"><Leaf size={24} /><p>{group.subject}</p></div><p className="project-footer">{copy.footer}</p>
     </section>
 
-    <section className="chat-frame" aria-label={group.name}>
-      <header className="chat-header"><button className="icon-button back-button" aria-label={copy.about} onClick={() => dialog.current?.showModal()}><ArrowLeft size={22} /></button><Avatar group /><button className="group-details" onClick={() => dialog.current?.showModal()}><strong>{group.name}</strong><span>{chat.typing ? `${people[chat.typing].name} ${copy.typing}` : chat.hasAmir ? group.members : group.membersBeforeAmir}</span></button><button className="icon-button" onClick={restart} aria-label={copy.restart} title={copy.restart}><RotateCcw size={19} /></button><button className="icon-button desktop-info" onClick={() => dialog.current?.showModal()} aria-label={copy.about}><Info size={20} /></button></header>
+    <section className={`chat-frame ${effect ? `frame-effect-${effect.lens}` : ""}`} aria-label={group.name}>
+      <header className="chat-header"><button className="icon-button back-button" aria-label={copy.about} onClick={() => dialog.current?.showModal()}><ArrowLeft size={22} /></button><Avatar group /><button className="group-details" onClick={() => dialog.current?.showModal()}><strong>{group.name}</strong><span>{chat.typing ? `${people[chat.typing].name} ${copy.typing}` : chat.hasAmir ? group.members : group.membersBeforeAmir}</span></button><button className="icon-button" onClick={toggleMute} aria-label={muted ? "Hidupkan muzik" : "Senyapkan muzik"} title={muted ? "Hidupkan muzik" : "Senyapkan muzik"}>{muted ? <VolumeX size={19} /> : <Volume2 size={19} />}</button><button className="icon-button" onClick={restart} aria-label={copy.restart} title={copy.restart}><RotateCcw size={19} /></button><button className="icon-button desktop-info" onClick={() => dialog.current?.showModal()} aria-label={copy.about}><Info size={20} /></button></header>
       <div className="chapter-bar">
         <span className="chapter-dot" />
         <span className="chapter-title">{chat.complete ? copy.promptEnd : chat.step.title}</span>
@@ -94,6 +134,11 @@ export default function ChatSimulator() {
           <button onClick={restart}><RotateCcw size={15} />{copy.restart}</button>
         </section>}
       </div>
+      {effect && <div key={effect.key} className={`choice-effect lens-${effect.lens}`} aria-hidden="true">
+        {effect.lens === "deontology" && <div className="effect-stamp"><span className="stamp-shockwave" /><div className="stamp-seal"><Scale size={30} /></div></div>}
+        {effect.lens === "utilitarianism" && <div className="effect-ripple"><span className="ripple-ring r1" /><span className="ripple-ring r2" /><span className="ripple-ring r3" /><div className="ripple-core"><Users size={26} /></div></div>}
+        {effect.lens === "care" && <div className="effect-care-box"><span className="care-aura" /><div className="care-center"><Heart size={28} /></div><span className="care-float f1"><Heart size={15} /></span><span className="care-float f2"><Heart size={18} /></span><span className="care-float f3"><Heart size={14} /></span></div>}
+      </div>}
       {unread > 0 && <button className="new-messages" onClick={scrollToNew}><ArrowDown size={15} />{copy.newMessages}<span>{unread}</span></button>}
       <footer className="chat-composer">
         {!chat.complete ? <div className="suggestion-area">

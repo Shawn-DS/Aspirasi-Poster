@@ -33,6 +33,7 @@ export type ConversationState = {
   nextId: number;
   firstChoice: string | null;
   counts: EthicsCounts;
+  lastLens: EthicsLens | null;
   ending: Reflection | null;
 };
 export type ConversationAction =

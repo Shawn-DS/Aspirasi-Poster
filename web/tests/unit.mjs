@@ -7,17 +7,21 @@ async function importSource(path) {
   const result = await build({ entryPoints: [path], bundle: true, write: false, format: "esm", platform: "node" });
   return import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString("base64")}`);
 }
-const { conversationReducer: reduce, getEthicsProfile, initialConversation, messageDelay } = await importSource("features/chat/lib/conversation.ts");
+const { conversationReducer: reduce, getEthicsProfile, initialConversation, LENS_VIBRATION, messageDelay } = await importSource("features/chat/lib/conversation.ts");
 const { opening, openingReflections, steps } = await importSource("features/chat/data/story.ts");
 const { viewportGeometry } = await importSource("features/chat/lib/viewport.ts");
 assert.deepEqual(viewportGeometry({ height: 390, offsetTop: 210, baselineHeight: 844, inputFocused: true }), { height: 390, top: 210, keyboardOpen: true });
 assert.deepEqual(viewportGeometry({ height: 844, offsetTop: 210, baselineHeight: 844, inputFocused: false }), { height: 844, top: 0, keyboardOpen: false });
 assert.deepEqual(viewportGeometry({ height: 844, offsetTop: -10, baselineHeight: 844, inputFocused: true }), { height: 844, top: 0, keyboardOpen: false });
 assert.equal(viewportGeometry({ height: 0, offsetTop: NaN, baselineHeight: 568, inputFocused: false }).height, 568);
+assert.equal(typeof LENS_VIBRATION.deontology, "number");
+assert.ok(Array.isArray(LENS_VIBRATION.utilitarianism) && LENS_VIBRATION.utilitarianism.length === 5);
+assert.ok(Array.isArray(LENS_VIBRATION.care) && LENS_VIBRATION.care.length === 3);
 const time = "12:00";
 const flush = state => { while (state.queue.length) state = reduce(state, { type: "advance", time }); return state; };
 let state = initialConversation();
 assert.equal(state.messages.length, 0);
+assert.equal(state.lastLens, null);
 assert.deepEqual(state.counts, { deontology: 0, utilitarianism: 0, care: 0 });
 assert.equal(reduce(state, { type: "send", text: "Too early", time }), state);
 state = flush(state);
@@ -28,6 +32,7 @@ for (const text of ["x".repeat(500), "😀".repeat(500), "<script>alert('x')</sc
   const sent = reduce(state, { type: "send", text, time });
   assert.equal(sent.messages.at(-1).text, text);
   assert.equal(sent.turn, 1);
+  assert.equal(sent.lastLens, null);
   assert.deepEqual(sent.counts, { deontology: 0, utilitarianism: 0, care: 0 });
   assert.equal(reduce(sent, { type: "send", text: "duplicate", time }), sent);
 }
@@ -48,6 +53,7 @@ function explore(s, path = []) {
     const sent = reduce(s, { type: "send", text: choice.text, time });
     assert.equal(reduce(sent, { type: "send", text: choice.text, time }), sent, "Double taps cannot skip a question.");
     assert.equal(sent.turn, s.turn + 1);
+    assert.equal(sent.lastLens, choice.lens);
     assert.equal(sent.counts[choice.lens], s.counts[choice.lens] + 1);
     const expected = [...choice.replies, ...(step.transition ?? [])];
     if (steps[sent.turn]) expected.push(steps[sent.turn].prompt);

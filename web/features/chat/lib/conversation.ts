@@ -4,6 +4,12 @@ import type { ConversationAction, ConversationState, EthicsCounts, EthicsLens, E
 export const MAX_MESSAGE_LENGTH = 500;
 const LENSES: EthicsLens[] = ["deontology", "utilitarianism", "care"];
 
+export const LENS_VIBRATION: Record<EthicsLens, number | number[]> = {
+  deontology: 45,
+  utilitarianism: [22, 55, 22, 55, 22],
+  care: [28, 80, 42],
+};
+
 export function getEthicsProfile(counts: EthicsCounts): EthicsProfile {
   const max = Math.max(counts.deontology, counts.utilitarianism, counts.care);
   if (max === 0) return ethicsProfiles.balanced;
@@ -19,6 +25,7 @@ export function initialConversation(): ConversationState {
     nextId: 1,
     firstChoice: null,
     counts: { deontology: 0, utilitarianism: 0, care: 0 },
+    lastLens: null,
     ending: null,
   };
 }
@@ -45,6 +52,7 @@ export function conversationReducer(state: ConversationState, action: Conversati
     turn,
     firstChoice,
     counts,
+    lastLens: choice?.lens ?? null,
     ending: choice?.ending ?? null,
     nextId: state.nextId + 1,
     messages: [...state.messages, { id: state.nextId, sender: "you", text, time: action.time }],

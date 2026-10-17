@@ -5,6 +5,7 @@ import Avatar from "../chat/components/Avatar";
 import { group } from "../chat/data/story";
 import { useChatViewport } from "../chat/hooks/useChatViewport";
 import ChatSimulator from "../chat/ChatSimulator";
+import { sound } from "../chat/lib/sound";
 import { MAX_STUDENT_ID_LENGTH, normalizeStudentId } from "./validation";
 
 export default function GroupInvitation() {
@@ -32,6 +33,7 @@ function InvitationForm({ onJoined }: { onJoined: () => void }) {
     event.preventDefault();
     if (submitting.current) return;
     if (!normalizeStudentId(studentId)) { setError("Sila masukkan nombor matrik antara 1 hingga 80 aksara."); input.current?.focus(); return; }
+    sound.prime();
     submitting.current = true; setPending(true); setError("");
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 15000);
