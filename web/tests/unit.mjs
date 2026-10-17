@@ -113,6 +113,32 @@ assert.deepEqual(wrongTurn.queue.slice(0, steps[0].fallback.length), steps[0].fa
 assert.deepEqual(reduce(matched, { type: "restart" }), initialConversation(), "Restart cancels an unfinished response.");
 assert.equal(messageDelay("text", false, true), 180);
 assert.ok(messageDelay("x".repeat(500), false, false) <= 1750);
+const { lookupWord, tokenizeText } = await importSource("features/chat/data/dictionary.ts");
+const { copy, ethicsProfiles } = await importSource("features/chat/data/story.ts");
+const storyTexts = [
+  ...opening.map(m => m.text),
+  ...Object.values(openingReflections).map(m => m.text),
+  ...Object.values(ethicsProfiles).flatMap(p => [p.title, p.summary]),
+  copy.endText,
+  copy.endNote,
+  ...steps.flatMap(step => [
+    step.prompt.text,
+    ...step.fallback.map(m => m.text),
+    ...(step.transition ?? []).map(m => m.text),
+    ...step.choices.flatMap(c => [c.text, ...c.replies.map(m => m.text), ...(c.ending ? [c.ending.title, c.ending.text] : [])]),
+  ]),
+];
+for (const sentence of storyTexts) {
+  const segments = tokenizeText(sentence);
+  assert.equal(segments.map(s => s.text).join(""), sentence);
+  for (const seg of segments) {
+    if (/[a-zA-Z]/.test(seg.text)) {
+      assert.ok(seg.lookup && seg.lookup.zh && seg.lookup.en, `Missing dictionary translation for "${seg.text}" in "${sentence}"`);
+    }
+  }
+}
+assert.equal(lookupWord("..."), null);
+assert.equal(lookupWord("3"), null);
 // Guard the MVP's privacy boundary and removal of the old application surface.
 for (const path of ["app/admin", "app/print", "lib/session.ts", "components/ui"]) assert.equal(existsSync(path), false, path);
 function inspect(dir) {
@@ -123,4 +149,5 @@ function inspect(dir) {
   }
 }
 inspect("features/chat");
-console.log("PASS: all 6561 eight-question routes, 24 distinct option responses, 3-lens ethics profile (Deontology, Utilitarianism, Ethics of Care, Balanced), one Amir arrival after question 3, endings, Unicode limits, duplicate-send prevention, restart, viewport geometry, reduced motion, and no chat persistence.");
+console.log("PASS: all 6561 eight-question routes, 24 distinct option responses, 3-lens ethics profile, 100% bilingual dictionary coverage, one Amir arrival after question 3, endings, Unicode limits, duplicate-send prevention, restart, viewport geometry, reduced motion, and no chat persistence.");
+

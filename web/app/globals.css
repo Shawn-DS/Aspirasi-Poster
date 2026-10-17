@@ -56,3 +56,30 @@ input{font:inherit}.join-screen{min-height:100dvh;height:var(--visual-height,100
 @keyframes care-heartbeat{0%{opacity:0;transform:scale(.7)}18%{opacity:1;transform:scale(1.12)}34%{transform:scale(.94)}52%{opacity:1;transform:scale(1.15)}74%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.92)}}
 @keyframes care-aura-pulse{0%{opacity:0;transform:scale(.6)}40%{opacity:1;transform:scale(1.35)}100%{opacity:0;transform:scale(1.75)}}
 @keyframes care-float-up{0%{opacity:0;transform:translateY(8px) scale(.7)}30%{opacity:.9;transform:translateY(-8px) scale(1)}100%{opacity:0;transform:translateY(-34px) scale(.85)}}
+
+/* Tap-to-translate (BM -> 中文 / EN) */
+.dictionary-hint{display:flex;align-items:center;justify-content:center;gap:6px;width:fit-content;margin:-10px auto 16px;background:#eaf4e4eb;border:1px solid #cfe0c5;color:#476d4b;font-size:10px;line-height:1.5;padding:4px 10px;border-radius:999px}
+.translatable-word{cursor:pointer;border-radius:4px;padding:0 1px;margin:0 -1px;transition:background .12s,color .12s;-webkit-tap-highlight-color:transparent}
+.translatable-word:hover{background:#2d7a581c;text-decoration:underline dotted #588b6c;text-underline-offset:3px}
+.translatable-word.is-active{background:#1b83592e;color:#0f4c33;text-decoration:underline solid #15734d;text-underline-offset:3px;font-weight:500}
+.suggestion-toolbar>button.dict-toggle{display:inline-flex;align-items:center;gap:5px;border:1px solid #cbd8be;background:#fbfdf8;border-radius:999px;color:#3d6d50;font-size:10px;font-weight:600;padding:3px 9px;min-height:24px;flex-shrink:0}
+.suggestion-toolbar>button.dict-toggle:hover{background:#edf4e6}
+.suggestion-toolbar>button.dict-toggle.is-active{background:#12836c;border-color:#12836c;color:#fff}
+.reply-choices.dict-mode .suggestions button{border-style:dashed;border-color:#8eb08b;background:#f6faf1}
+.reply-choices.dict-mode .translatable-word{text-decoration:underline dotted #698e65;text-underline-offset:3px}
+.reply-choices.dict-mode .choice-number{background:#12836c;color:#fff;box-shadow:0 1px 4px #12836c45}
+.word-popover{position:absolute;z-index:20;width:248px;max-width:calc(100% - 20px);background:#1b332af7;color:#f5faf6;border:1px solid #3c6553;border-radius:12px;padding:10px 12px;box-shadow:0 12px 30px #0d211955;backdrop-filter:blur(6px);pointer-events:auto}
+.word-popover.place-above{transform:translate(-50%,-100%);animation:popover-above .14s ease-out}
+.word-popover.place-below{transform:translate(-50%,0);animation:popover-below .14s ease-out}
+.word-popover-head{display:flex;align-items:center;gap:6px;border-bottom:1px solid #ffffff21;padding-bottom:6px;margin-bottom:7px}
+.word-popover-head strong{font-size:14px;color:#b4f0cd;letter-spacing:.2px}
+.word-popover-stem{font-size:11px;color:#9ec2ae}
+.word-popover-close{margin-left:auto;border:0;background:#ffffff17;color:#dcebe2;width:21px;height:21px;border-radius:50%;display:grid;place-items:center;padding:0}
+.word-popover-close:hover{background:#ffffff29}
+.word-popover-row{display:flex;align-items:flex-start;gap:7px;font-size:12px;line-height:1.45;color:#eef7f1;text-align:left}
+.word-popover-row+.word-popover-row{margin-top:5px}
+.word-lang-badge{font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:#2b6d51;color:#daf9e6;flex-shrink:0;margin-top:1px;letter-spacing:.4px}
+.word-lang-badge.en{background:#325b74;color:#dceefa}
+@keyframes popover-above{from{opacity:0;transform:translate(-50%,calc(-100% + 5px)) scale(.96)}to{opacity:1;transform:translate(-50%,-100%) scale(1)}}
+@keyframes popover-below{from{opacity:0;transform:translate(-50%,-5px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+
