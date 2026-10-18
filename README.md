@@ -21,6 +21,8 @@
 
 每個選項的 `lens` 決定它算哪一派：`"deontology"`、`"utilitarianism"` 或 `"care"`。每題三個選項必須各佔一派（測試會檢查）。
 
+長按鄰居訊息可選 emoji，鄰居會按原訊息與表情接話；底部 **Emoji** 面板也能送出八款圖案。這些預寫互動文案在 [`web/features/chat/lib/socialReplies.ts`](web/features/chat/lib/socialReplies.ts)，不接 AI，不影響八題進度或倫理傾向，也不記錄到資料庫。
+
 ## 常用指令
 
 在 `web/` 資料夾執行（PowerShell 請用 `npm.cmd`）：

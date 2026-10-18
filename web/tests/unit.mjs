@@ -9,6 +9,32 @@ async function importSource(path) {
 }
 const { conversationReducer: reduce, getEthicsProfile, initialConversation, LENS_VIBRATION, messageDelay } = await importSource("features/chat/lib/conversation.ts");
 const { opening, openingReflections, steps } = await importSource("features/chat/data/story.ts");
+const { reactionReply, stickerReply } = await importSource("features/chat/lib/socialReplies.ts");
+const emojis = ["👍", "❤️", "🙏", "😮", "😢", "🤝"];
+const allIncoming = [opening[1], ...steps.flatMap(step => [step.prompt, ...step.choices.flatMap(choice => choice.replies), ...step.fallback, ...(step.transition ?? [])]), ...Object.values(openingReflections)].filter(m => m.sender !== "system");
+for (const source of allIncoming) {
+  const answers = emojis.map(emoji => reactionReply(source, emoji));
+  assert.equal(new Set(answers.map(reply => reply?.text)).size, 6, "Each emoji has its own response to this message.");
+  for (const reply of answers) {
+    assert.ok(reply?.text, `Missing contextual reply: ${source.text}`);
+    assert.equal(reply.sender, source.sender, "The original speaker answers, including before Amir joins.");
+  }
+}
+assert.match(reactionReply(steps[1].prompt, "👍").text, /bukan bukti/, "Agreement with concern must not endorse prejudice.");
+assert.doesNotMatch(reactionReply(steps[6].prompt, "😮").text, /sudah ditemui/, "A reaction cannot reveal a future plot resolution.");
+assert.match(reactionReply(steps[6].choices[0].replies[0], "😢").text, /sudah ditemui/, "After resolution, acknowledge that the equipment was found.");
+assert.match(reactionReply(steps[6].fallback[0], "😮").text, /sudah ditemui/);
+assert.equal(reactionReply({ sender: "you", text: "hello" }, "👍"), null);
+assert.equal(reactionReply(opening[1], null), null);
+assert.equal(reactionReply(opening[1], "unknown"), null);
+assert.equal(reactionReply({ sender: "aina", text: "unknown message" }, "👍"), null, "Never invent an unrelated fallback reply.");
+for (const id of ["s12", "s23", "s15", "s24", "s08", "s34", "s37", "s06"]) {
+  const response = stickerReply(opening[1], id);
+  assert.equal(response.message.sender, "aina");
+  assert.ok(response.emoji && response.message.text);
+}
+assert.match(stickerReply(opening[1], "s37").message.text, /bukti/);
+assert.match(stickerReply({ sender: "amir", text: "hello" }, "s34").message.text, /usaha saya/);
 const { viewportGeometry } = await importSource("features/chat/lib/viewport.ts");
 assert.deepEqual(viewportGeometry({ height: 390, offsetTop: 210, baselineHeight: 844, inputFocused: true }), { height: 390, top: 210, keyboardOpen: true });
 assert.deepEqual(viewportGeometry({ height: 844, offsetTop: 210, baselineHeight: 844, inputFocused: false }), { height: 844, top: 0, keyboardOpen: false });
@@ -128,7 +154,12 @@ const storyTexts = [
     ...step.choices.flatMap(c => [c.text, ...c.replies.map(m => m.text), ...(c.ending ? [c.ending.title, c.ending.text] : [])]),
   ]),
 ];
-for (const sentence of storyTexts) {
+const socialTexts = [
+  ...allIncoming.flatMap(source => emojis.map(emoji => reactionReply(source, emoji).text)),
+  ...["aina", "lim", "admin", "amir"].flatMap(sender => ["s12", "s23", "s15", "s24", "s08", "s34", "s37", "s06"].map(id => stickerReply({ sender, text: "" }, id).message.text)),
+  "Reaksi anda", "Membalas emoji anda",
+];
+for (const sentence of [...storyTexts, ...socialTexts]) {
   const segments = tokenizeText(sentence);
   assert.equal(segments.map(s => s.text).join(""), sentence);
   for (const seg of segments) {
@@ -149,5 +180,5 @@ function inspect(dir) {
   }
 }
 inspect("features/chat");
-console.log("PASS: all 6561 eight-question routes, 24 distinct option responses, 3-lens ethics profile, 100% bilingual dictionary coverage, one Amir arrival after question 3, endings, Unicode limits, duplicate-send prevention, restart, viewport geometry, reduced motion, and no chat persistence.");
+console.log("PASS: contextual replies for every story message × 6 reactions, 8 semantic emoji replies, all 6561 eight-question routes, 24 distinct option responses, 3-lens ethics profile, 100% bilingual dictionary coverage, one Amir arrival after question 3, endings, Unicode limits, duplicate-send prevention, restart, viewport geometry, reduced motion, and no chat persistence.");
 

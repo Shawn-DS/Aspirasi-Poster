@@ -1,4 +1,5 @@
 "use client";
+import { memo, useMemo } from "react";
 import { tokenizeText, type WordLookupResult } from "../data/dictionary";
 
 export interface ActiveWordState {
@@ -10,7 +11,7 @@ export interface ActiveWordState {
   placeBelow: boolean;
 }
 
-export default function TranslatableText({
+export default memo(function TranslatableText({
   text,
   prefixId,
   activeId,
@@ -21,7 +22,7 @@ export default function TranslatableText({
   activeId?: string | null;
   onSelectWord: (id: string, lookup: WordLookupResult, target: HTMLElement) => void;
 }) {
-  const segments = tokenizeText(text);
+  const segments = useMemo(() => tokenizeText(text), [text]);
   return <>
     {segments.map((seg, idx) => {
       if (!seg.lookup) return <span key={idx}>{seg.text}</span>;
@@ -51,4 +52,4 @@ export default function TranslatableText({
       );
     })}
   </>;
-}
+});

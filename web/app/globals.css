@@ -129,9 +129,10 @@ input{font:inherit}.join-spinner{animation:join-spin 1s linear infinite}@keyfram
 .translatable-word{cursor:pointer;border-radius:4px;padding:0 1px;margin:0 -1px;transition:background .12s,color .12s;-webkit-tap-highlight-color:transparent}
 .translatable-word:hover{background:#2d7a581c;text-decoration:underline dotted #588b6c;text-underline-offset:3px}
 .translatable-word.is-active{background:#1b83592e;color:#0f4c33;text-decoration:underline solid #15734d;text-underline-offset:3px;font-weight:500}
-.suggestion-toolbar>button.dict-toggle{display:inline-flex;align-items:center;gap:5px;border:1px solid #cbd8be;background:#fbfdf8;border-radius:999px;color:#3d6d50;font-size:10px;font-weight:600;padding:3px 9px;min-height:24px;flex-shrink:0}
-.suggestion-toolbar>button.dict-toggle:hover{background:#edf4e6}
-.suggestion-toolbar>button.dict-toggle.is-active{background:#12836c;border-color:#12836c;color:#fff}
+.dict-toggle{display:inline-flex;align-items:center;gap:5px;border:1px solid #cbd8be;background:#fbfdf8;border-radius:999px;color:#3d6d50;font-size:10px;font-weight:600;padding:3px 9px;min-height:24px;flex-shrink:0}
+.dict-toggle:hover{background:#edf4e6}
+.dict-toggle.is-active{background:#12836c;border-color:#12836c;color:#fff}
+.toolbar-actions{display:flex;align-items:center;gap:5px;flex-shrink:0}
 .reply-choices.dict-mode .suggestions button{border-style:dashed;border-color:#8eb08b;background:#f6faf1}
 .reply-choices.dict-mode .translatable-word{text-decoration:underline dotted #698e65;text-underline-offset:3px}
 .reply-choices.dict-mode .choice-number{background:#12836c;color:#fff;box-shadow:0 1px 4px #12836c45}
@@ -219,5 +220,102 @@ input{font:inherit}.join-spinner{animation:join-spin 1s linear infinite}@keyfram
   .join-screen.keyboard-open .join-dock-button{min-height:44px;font-size:15px}
 }
 
+/* Feature 1: WhatsApp Long-Press Classic Emoji Reactions */
+.message-row.has-reaction{margin-bottom:13px}
+.message-row.is-reacting{z-index:15;position:relative}
+.message-bubble{transition:transform .14s ease,box-shadow .14s ease;-webkit-user-select:none;user-select:none}
+.message-bubble.is-pressing{transform:scale(.98);box-shadow:0 0 0 2px #15917740}
+.message-row.is-reacting .message-bubble{box-shadow:0 6px 20px #15382824,0 0 0 1.5px #15917755}
+.message-reaction-pill{position:absolute;right:8px;bottom:-12px;z-index:3;display:inline-flex;align-items:center;gap:2.5px;background:#ffffff;border:1.5px solid #d4e2cb;border-radius:999px;padding:2px 6px;box-shadow:0 3px 8px #18322424;font-size:12.5px;line-height:1;user-select:none;animation:reaction-pop .26s cubic-bezier(.18,.89,.32,1.28)}
+.message-reaction-pill.own-reaction{right:8px}
+.message-reaction-pill b{font-size:9.5px;font-weight:750;color:#3d6249;margin-left:1.5px}
+.message-reaction-pill.user-reaction{cursor:pointer;border-color:#9fd0b0;background:#f8fff9}
+.message-reaction-pill.user-reaction:hover{transform:scale(1.08)}
+
+.whatsapp-reaction-popover{position:absolute;bottom:calc(100% + 7px);z-index:25;background:#ffffff;border:1.5px solid #cfe0c5;border-radius:999px;padding:4px 8px;box-shadow:0 12px 32px #112a1e38;animation:reaction-pop .2s cubic-bezier(.18,.89,.32,1.25)}
+.whatsapp-reaction-popover.align-left{left:0}
+.whatsapp-reaction-popover.align-right{right:0}
+.reaction-quick-bar{display:flex;align-items:center;gap:3px}
+.reaction-emoji-btn{border:0;background:transparent;width:32px;height:32px;border-radius:50%;font-size:18px;padding:0;display:grid;place-items:center;transition:transform .14s,background .14s}
+.reaction-emoji-btn:hover{transform:scale(1.26) translateY(-2px);background:#eff7ec}
+.reaction-emoji-btn.is-selected{background:#def3e4;box-shadow:inset 0 0 0 1.5px #2e9468}
+@keyframes reaction-pop{0%{opacity:0;transform:scale(.4) translateY(4px)}70%{opacity:1;transform:scale(1.1) translateY(-1px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+
+/* Feature 2: 8 Curated Captioned WhatsApp Stickers in Chat & Drawer */
+.chat-sticker-row{display:flex;margin-top:8px;animation:message-in .26s cubic-bezier(.18,.89,.32,1.18)}
+.chat-sticker-row.incoming{justify-content:flex-start;padding-left:33px}
+.chat-sticker-row.outgoing{justify-content:flex-end;padding-right:4px;margin-bottom:10px}
+.chat-sticker-card{position:relative;border:0;background:transparent;padding:4px 6px;display:inline-flex;flex-direction:column;align-items:center;cursor:pointer;filter:drop-shadow(0 6px 14px #1d3a2a1f);transition:transform .18s}
+.chat-sticker-card:hover{transform:scale(1.05) rotate(-1.5deg)}
+.chat-sticker-card.is-bouncing{animation:sticker-boing .52s cubic-bezier(.22,1.28,.36,1)}
+.chat-sticker-art{position:relative;display:flex;flex-direction:column;align-items:center}
+.chat-sticker-img{width:104px;height:104px;object-fit:contain;display:block;user-select:none}
+.chat-sticker-caption{margin-top:-10px;color:#ffffff;font-size:10px;font-weight:800;letter-spacing:.4px;padding:3px 10px;border-radius:999px;border:2px solid #ffffff;box-shadow:0 3px 8px #00000024;white-space:nowrap}
+.chat-sticker-time{margin-top:4px;display:inline-flex;align-items:center;gap:3px;background:#f7fbefeb;border:1px solid #dce5d2;color:#687a65;font-size:9px;font-weight:600;padding:1.5px 7px;border-radius:999px;box-shadow:0 2px 5px #1e352612}
+.chat-sticker-row.outgoing .chat-sticker-time{background:#dff8cbf2;border-color:#bee2a4;color:#3d6142}
+.chat-sticker-time svg{color:#268468}
+.message-reaction-pill.sticker-reaction{bottom:-8px;right:4px}
+@keyframes sticker-boing{0%{transform:scale(1)}30%{transform:scale(1.16,0.88) translateY(-6px) rotate(3deg)}55%{transform:scale(0.94,1.08) translateY(0) rotate(-2deg)}80%{transform:scale(1.04,0.98)}100%{transform:scale(1)}}
+
+.sticker-drawer{position:absolute;left:10px;right:10px;bottom:calc(100% + 6px);background:#fffffffa;backdrop-filter:blur(10px);border:1.5px solid #cbe0c2;border-radius:18px;padding:11px 12px;box-shadow:0 16px 42px #14302233;z-index:22;animation:reaction-pop .2s cubic-bezier(.18,.89,.32,1.2)}
+.sticker-drawer-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:7px;margin-bottom:8px;border-bottom:1px solid #e3ece0}
+.sticker-drawer-head strong{font-size:11.5px;color:#1f4d38;letter-spacing:.2px}
+.sticker-drawer-close{border:0;background:#eef5eb;color:#3f6650;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;padding:0}
+.sticker-drawer-close:hover{background:#dfece0}
+.sticker-drawer-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:2px}
+.sticker-drawer-item{border:1px solid #e3ede0;background:#f8fbf6;border-radius:13px;padding:6px 4px 5px;display:flex;flex-direction:column;align-items:center;gap:2px;transition:transform .14s,background .14s,border-color .14s}
+.sticker-drawer-item:hover{transform:translateY(-2px);background:#ecf6e8;border-color:#9ec9a6;box-shadow:0 4px 10px #1a3b2814}
+.sticker-drawer-item img{width:48px;height:48px;object-fit:contain;display:block;filter:drop-shadow(0 2px 4px #1833241a)}
+.sticker-item-caption{font-size:8px;font-weight:800;color:#ffffff;padding:1.5px 6px;border-radius:999px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;margin-top:-4px;border:1.5px solid #ffffff}
+.sticker-item-meaning{font-size:9.5px;font-weight:600;color:#4a6753;line-height:1.2}
+
+/* Feature 3: Live Evolving Mini Mascot in Chapter Bar */
+.chapter-meta{margin-left:auto;display:flex;align-items:center;gap:6px;position:relative;flex-shrink:0}
+.chapter-bar .chapter-meta small{margin-left:0}
+.chapter-mascot-pill{border:1.5px solid #cde0c4;background:#ffffff;border-radius:999px;width:26px;height:26px;padding:0;display:grid;place-items:center;box-shadow:0 2px 6px #1e3d2b12;animation:reaction-pop .32s cubic-bezier(.18,.89,.32,1.25);transition:transform .15s,border-color .15s,box-shadow .15s}
+.chapter-mascot-pill:hover,.chapter-mascot-pill.is-active{transform:scale(1.12);border-color:#58a982;box-shadow:0 3px 9px #18644926}
+.chapter-mascot-pill.state-deontology{border-color:#93c5fd;background:#f0f9ff}
+.chapter-mascot-pill.state-utilitarianism{border-color:#fcd34d;background:#fffbeb}
+.chapter-mascot-pill.state-care{border-color:#f9a8d4;background:#fdf2f8}
+.chapter-mascot-pill.state-balanced{border-color:#86efac;background:#f0fdf4}
+.chapter-mascot-pill .ethics-sticker{filter:none}
+.chapter-seed-icon{font-size:13px;line-height:1}
+.chapter-mascot-toast{position:absolute;right:64px;top:50%;transform:translateY(-50%);background:#19382cf2;color:#f2fbf5;font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;box-shadow:0 4px 12px #132b212e;pointer-events:none;animation:reaction-pop .2s ease-out;z-index:5}
+
+/* Feature 4: Interactive Mascot Easter Egg on Final Reflection Card */
+.reflection-mascot-wrap{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 6px}
+.reflection-card button.reflection-mascot-btn{position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:0;box-shadow:none;padding:2px 8px 4px;margin:0;min-height:0;border-radius:16px}
+.reflection-card button.reflection-mascot-btn:hover{background:#ffffff80;transform:translateY(-2px)}
+.reflection-card button.reflection-mascot-btn.is-poked .reflection-mascot{animation:sticker-boing .52s cubic-bezier(.22,1.28,.36,1),mascot-bob 2.6s ease-in-out .52s infinite}
+.mascot-tap-hint{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;color:#2b6648;background:#ffffffd9;border:1px solid #c5dec9;padding:2px 8px;border-radius:999px;margin-top:-4px;box-shadow:0 2px 6px #1c3a2812}
+.profile-deontology .mascot-tap-hint{color:#1d4ed8;border-color:#bae6fd}
+.profile-utilitarianism .mascot-tap-hint{color:#b45309;border-color:#fde68a}
+.profile-care .mascot-tap-hint{color:#be185d;border-color:#fbcfe8}
+.reflection-mascot-speech{position:relative;max-width:270px;background:#1b382cf5;color:#f5fcf8;font-size:11px;font-weight:600;line-height:1.4;padding:7px 12px;border-radius:12px;margin-bottom:6px;box-shadow:0 8px 20px #152e2329;animation:reaction-pop .25s cubic-bezier(.18,.89,.32,1.25)}
+.reflection-mascot-speech:after{content:"";position:absolute;left:50%;bottom:-5px;width:9px;height:9px;background:#1b382cf5;transform:translateX(-50%) rotate(45deg)}
+.mascot-poke-sparkles{position:absolute;inset:0;pointer-events:none}
+.mascot-poke-sparkles i{position:absolute;font-style:normal;font-size:15px;opacity:0}
+.mascot-poke-sparkles .sp-1{top:10px;left:4px;animation:particle-fly-1 .7s ease-out forwards}
+.mascot-poke-sparkles .sp-2{top:6px;right:4px;animation:particle-fly-2 .7s ease-out .04s forwards}
+.mascot-poke-sparkles .sp-3{top:-4px;left:44%;animation:particle-fly-5 .7s ease-out .02s forwards}
 
 
+/* Bounded emoji controls: two columns on phones, scroll within the chat viewport. */
+.sticker-drawer{display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#fff;backdrop-filter:none;animation:message-in .14s ease-out}
+.sticker-drawer-head{flex-shrink:0;margin-bottom:6px;padding-bottom:5px;gap:8px}
+.sticker-drawer-head strong{font-size:14px;line-height:1.3}
+.sticker-drawer-close{width:44px;height:44px;flex-shrink:0}
+.sticker-drawer-grid{grid-template-columns:repeat(4,minmax(0,1fr));min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:thin;padding:2px 3px 6px}
+.sticker-drawer-item{min-width:0;min-height:98px;padding:8px 4px;gap:4px}
+.sticker-item-caption{font-size:11px;white-space:normal;overflow:visible;text-overflow:clip;text-align:center;line-height:1.35;overflow-wrap:anywhere}
+.sticker-item-meaning{font-size:12px;text-align:center}
+.whatsapp-reaction-popover{bottom:auto!important;right:auto!important;padding:4px 6px;animation:message-in .12s ease-out}
+.reaction-quick-bar{gap:0;justify-content:space-between}
+.reaction-emoji-btn{width:44px;height:44px;flex-shrink:0;font-size:22px;transition:background .1s}
+.reaction-emoji-btn:hover{transform:none;background:#eff7ec}
+.message-bubble{-webkit-touch-callout:none}
+.social-quote{margin:2px 0 8px;border-left:3px solid #3a9276;background:#f0f6ed;padding:7px 9px;border-radius:5px;max-height:95px;overflow-y:auto}
+.social-quote small,.social-emoji-label{display:block;font-size:11px;line-height:1.4;color:#3f7159;margin-bottom:3px}
+.social-quote>span{display:block;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+@media(max-width:600px){.sticker-drawer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sticker-drawer-item:hover{transform:none;box-shadow:none}.message-bubble.is-pressing{transform:none}.chat-sticker-card{filter:none}}
+@media(prefers-reduced-motion:reduce){.sticker-drawer,.whatsapp-reaction-popover,.message-reaction-pill{animation:none!important}.message-bubble,.reaction-emoji-btn{transition:none}}
