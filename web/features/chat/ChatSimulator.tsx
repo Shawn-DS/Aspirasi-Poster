@@ -3,6 +3,8 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } f
 import { ArrowDown, ArrowLeft, BookOpen, Check, Clock3, Info, Leaf, MessageCircle, RotateCcw, ShieldCheck, Smile, Sparkles, Volume2, VolumeX, X } from "lucide-react";
 import type { WordLookupResult } from "./data/dictionary";
 import { STICKER_PACK } from "./data/stickers";
+import { activityCopy, type ActivityId } from "./data/activities";
+import { activityAnchors } from "./lib/activities";
 import { communityProfiles, copy, ethicsLensMeta, group, people } from "./data/story";
 import { LENS_VIBRATION } from "./lib/conversation";
 import { sound } from "./lib/sound";
@@ -14,6 +16,7 @@ import EthicsSticker from "./components/EthicsSticker";
 import MessageBubble, { ChatStickerBubble } from "./components/MessageBubble";
 import TypingIndicator from "./components/TypingIndicator";
 import ReplyChoices from "./components/ReplyChoices";
+import ChatActivity from "./components/ChatActivity";
 import TranslatableText, { type ActiveWordState } from "./components/TranslatableText";
 import type { EthicsLens, EthicsProfileId } from "./types";
 
@@ -73,6 +76,8 @@ export default function ChatSimulator() {
   const lastCount = useRef(0);
   const lastSocialCount = useRef(0);
   const canSend = !chat.busy && !chat.complete;
+  const attachments = activityAnchors(chat.messages);
+  const displayTurn = chat.activity ? chat.turn - 1 : chat.turn;
   const { height: visibleHeight } = useChatViewport(root);
 
   const answeredCount = chat.counts.deontology + chat.counts.utilitarianism + chat.counts.care;
@@ -137,6 +142,13 @@ export default function ChatSimulator() {
     setActiveReactionMsgId(id);
   }, []);
   const closeReaction = useCallback(() => setActiveReactionMsgId(null), []);
+
+  const activityUpdated = useCallback(() => {
+    sound.playMessagePop();
+    const el = scroller.current;
+    if (el && nearBottom.current) el.scrollTop = el.scrollHeight;
+    else setUnread(count => count + 1);
+  }, []);
 
   const selectWord = useCallback((id: string, lookup: WordLookupResult, target: HTMLElement) => {
     setActiveReactionMsgId(null);
@@ -254,10 +266,10 @@ export default function ChatSimulator() {
               <EthicsSticker type={miniMascotState} size={22} />
             )}
           </button>
-          <small>{chat.complete ? copy.stepEnd : `${Math.min(chat.turn + 1, chat.totalSteps)} / ${chat.totalSteps}`}</small>
+          <small>{chat.complete ? copy.stepEnd : `${Math.min(displayTurn + 1, chat.totalSteps)} / ${chat.totalSteps}`}</small>
         </div>
         <div className="chapter-progress" aria-hidden="true">
-          <i style={{ width: `${chat.complete ? 100 : Math.round(((chat.turn + 1) / chat.totalSteps) * 100)}%` }} />
+          <i style={{ width: `${chat.complete ? 100 : Math.round(((displayTurn + 1) / chat.totalSteps) * 100)}%` }} />
         </div>
       </div>
       <div
@@ -296,6 +308,9 @@ export default function ChatSimulator() {
                   onReact={social.react}
                   onSelectWord={selectWord}
                 />
+                {(["buddy", "evidence"] as ActivityId[]).filter(id => attachments[id] === message.id).map(id => (
+                  <ChatActivity key={id} id={id} onComplete={() => chat.finishActivity(id)} onUpdate={activityUpdated} activeWordId={activeWord?.id} onSelectWord={selectWord} />
+                ))}
                 {interactions.map(entry => entry.stickerId ? (
                   <ChatStickerBubble key={`social-${entry.id}`} stickerId={entry.stickerId} time={entry.time} own autoReactEmoji={entry.autoReactEmoji} />
                 ) : entry.reply && (
@@ -445,7 +460,15 @@ export default function ChatSimulator() {
             </div>
           </div>
         )}
-        {!chat.complete ? <div className="suggestion-area">
+        {chat.activity ? <div className="activity-composer">
+          <span>{activityCopy.waiting}</span>
+          <button type="button" onClick={() => {
+            setActiveWord(null); setActiveReactionMsgId(null); setStickerDrawerOpen(false);
+            const card = scroller.current?.querySelector<HTMLElement>(`[data-activity="${chat.activity}"]`);
+            card?.scrollIntoView({ block: "start", behavior: "instant" });
+            card?.focus({ preventScroll: true });
+          }}>{activityCopy.continue}</button>
+        </div> : !chat.complete ? <div className="suggestion-area">
           <div className="suggestion-toolbar">
             <p>{chat.busy ? copy.waiting : dictMode ? "Ketik perkataan untuk terjemah, atau nombor (1–3) untuk pilih" : copy.suggestions}</p>
             <div className="toolbar-actions">
@@ -476,7 +499,7 @@ export default function ChatSimulator() {
                 }}
               >
                 <BookOpen size={12} />
-                {dictMode ? "Mod Pilih" : "Terjemah Pilihan"}
+                Translate
               </button>
             </div>
           </div>

@@ -12,7 +12,7 @@ export const people: Record<SenderId, { name: string; color: string }> = {
   lim: { name: "Uncle Lim", color: "#b16e2c" },
   admin: { name: "Admin Komuniti", color: "#40799b" },
   amir: { name: "Amir", color: "#39815a" },
-  you: { name: "Anda", color: "#27715b" },
+  you: { name: "Anda", color: "#1d6ea5" },
   system: { name: "Sistem", color: "#66766c" },
 };
 
@@ -212,7 +212,7 @@ export const steps: StoryStep[] = [
       {
         id: "presume-innocent", lens: "deontology",
         text: "Pegang prinsip anggapan tidak bersalah: jangan menuduh sesiapa tanpa bukti sahih, semak rekod penyimpanan dahulu.",
-        replies: [{ sender: "lim", text: "Betul kata anda. Selepas disemak, rupa-rupanya AJK sebelah sudah simpan di bilik kunci. Mujur kita berpegang pada prinsip!" }],
+        replies: [{ sender: "lim", text: "Betul kata anda. Selepas disemak, rupa-rupanya AJK sudah simpan di stor komuniti. Mujur kita berpegang pada prinsip!" }],
       },
     ],
     fallback: [{ sender: "admin", text: "Selepas disemak, AJK bertugas telah menyimpan kotak itu di dalam stor." }],

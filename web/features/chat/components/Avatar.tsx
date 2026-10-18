@@ -113,15 +113,20 @@ export default function Avatar({ sender, group = false }: { sender?: SenderId; g
   const isAina = sender === "aina";
   const isLim = sender === "lim";
   const isAdmin = sender === "admin";
-  const background = isAina ? "#f2e2ea" : isLim ? "#f5e6ce" : isAdmin ? "#ddeaf0" : "#dcecdf";
-  const ring = isAina ? "#d9bdd0" : isLim ? "#e2c8a2" : isAdmin ? "#b9d2de" : "#b8d7be";
-  const shirt = isAina ? "#8d5875" : isLim ? "#b87f3d" : isAdmin ? "#4e7e94" : "#498260";
+  const isYou = sender === "you";
+  const background = isAina ? "#f2e2ea" : isLim ? "#f5e6ce" : isAdmin ? "#ddeaf0" : isYou ? "#e0f2fe" : "#dcecdf";
+  const ring = isAina ? "#d9bdd0" : isLim ? "#e2c8a2" : isAdmin ? "#b9d2de" : isYou ? "#7dd3fc" : "#86efac";
+  const shirt = isAina ? "#8d5875" : isLim ? "#b87f3d" : isAdmin ? "#4e7e94" : isYou ? "#2563eb" : "#2f7a59";
   return (
     <span className="avatar" aria-hidden="true">
       <svg viewBox="0 0 48 48">
         <rect width="48" height="48" rx="24" fill={background} />
         <path d="M7 49Q7 30 24 30Q41 30 41 49" fill={shirt} />
-        <path d="M18 31Q24 35 30 31" fill="none" stroke="#ffffff40" strokeWidth="1.4" strokeLinecap="round" />
+        {isYou ? (
+          <path d="M19 30 Q24 34 29 30 L29 32 Q24 36 19 32 Z" fill="#ffffff" />
+        ) : (
+          <path d="M18 31Q24 35 30 31" fill="none" stroke="#ffffff40" strokeWidth="1.4" strokeLinecap="round" />
+        )}
         {isAina && <path d="M9 36V21Q9 5 24 5Q39 5 39 22V38L24 32Z" fill="#a8728e" />}
         <rect x="20" y="27" width="8" height="10" rx="3.5" fill="#bf8a62" />
         <ellipse cx="24" cy="22" rx="10" ry="12.8" fill="#d4a47c" />
@@ -129,8 +134,16 @@ export default function Avatar({ sender, group = false }: { sender?: SenderId; g
         <circle cx="30.5" cy="24.5" r="2.1" fill="#e08276" opacity="0.28" />
         {!isAina && (
           <path
-            d={isLim ? "M14 20Q11 6 25 8Q36 8 35 18L32 13Q20 10 14 20" : "M14 21Q9 5 24 7Q39 6 34 22L31 15Q23 20 16 14Z"}
-            fill={isLim ? "#68746d" : isAdmin ? "#2b424f" : "#2d4737"}
+            d={
+              isLim
+                ? "M14 20Q11 6 25 8Q36 8 35 18L32 13Q20 10 14 20"
+                : isYou
+                  ? "M13 19Q11 6 24 7Q37 6 35 18L33 13Q25 10 15 15Z"
+                  : isAdmin
+                    ? "M14 21Q9 5 24 7Q39 6 34 22L31 15Q23 20 16 14Z"
+                    : "M14 21Q9 5 24 7Q39 6 34 22L31 15Q23 20 16 14Z"
+            }
+            fill={isLim ? "#68746d" : isYou ? "#1e293b" : isAdmin ? "#2b424f" : "#1f382b"}
           />
         )}
         <circle cx="20" cy="22" r="1.15" fill="#2f362b" />

@@ -10,6 +10,8 @@ async function importSource(path) {
 const { conversationReducer: reduce, getEthicsProfile, initialConversation, LENS_VIBRATION, messageDelay } = await importSource("features/chat/lib/conversation.ts");
 const { opening, openingReflections, steps } = await importSource("features/chat/data/story.ts");
 const { reactionReply, stickerReply } = await importSource("features/chat/lib/socialReplies.ts");
+const { activityAnchors, pendingActivity } = await importSource("features/chat/lib/activities.ts");
+const { activityTexts, EVIDENCE_RECORD_ID, toolRecords } = await importSource("features/chat/data/activities.ts");
 const emojis = ["👍", "❤️", "🙏", "😮", "😢", "🤝"];
 const allIncoming = [opening[1], ...steps.flatMap(step => [step.prompt, ...step.choices.flatMap(choice => choice.replies), ...step.fallback, ...(step.transition ?? [])]), ...Object.values(openingReflections)].filter(m => m.sender !== "system");
 for (const source of allIncoming) {
@@ -104,6 +106,81 @@ function explore(s, path = []) {
 explore(state);
 assert.equal(routeTranscripts.size, 3 ** 8, "All 6561 choice combinations must complete with distinct transcripts.");
 
+// Attachments pause delivery at the relevant story boundary without becoming
+// extra ethics answers, changing the selected response, or revealing its ending.
+function beforeStep(index) {
+  let s = flush(initialConversation());
+  while (s.turn < index) s = flush(reduce(s, { type: "send", text: steps[s.turn].choices[0].text, time }));
+  return s;
+}
+assert.deepEqual(activityAnchors([]), {});
+assert.equal(pendingActivity(initialConversation(), []), null);
+for (const text of [...steps[3].choices.map(choice => choice.text), "Saya mahu terus berbincang."]) {
+  const ready = beforeStep(3);
+  assert.deepEqual(activityAnchors(ready.messages), {}, "Earlier replies cannot create a buddy card.");
+  const sent = reduce(ready, { type: "send", text, time });
+  assert.equal(pendingActivity(sent, []), null, "Amir must answer the actual fourth choice before the buddy card.");
+  assert.equal(activityAnchors(sent.messages).buddy, undefined);
+  const reply = reduce(sent, { type: "advance", time });
+  assert.equal(reply.messages.at(-1).text, sent.queue[0].text, "Each original branch response is preserved.");
+  assert.equal(pendingActivity(reply, []), "buddy");
+  assert.equal(reply.queue[0].text, steps[4].prompt.text, "Question five waits until pairing is complete.");
+  assert.equal(activityAnchors(reply.messages).buddy, reply.messages.at(-1).id);
+  assert.equal(pendingActivity(reply, ["evidence"]), "buddy", "Completing another activity cannot unlock pairing.");
+  assert.equal(pendingActivity(reply, ["buddy"]), null);
+  assert.equal(pendingActivity(reply, ["buddy", "buddy"]), null, "Duplicate completion is idempotent.");
+  assert.deepEqual(reply.counts, sent.counts, "Attachment delivery does not award a second ethics answer.");
+  const continued = flush(reply);
+  assert.equal(pendingActivity(continued, []), null, "A late completion cannot reopen an already delivered boundary.");
+  assert.equal(activityAnchors(continued.messages).buddy, reply.messages.at(-1).id, "The anchor remains on Amir's response when the next prompt arrives.");
+  const restarted = reduce(reply, { type: "restart" });
+  assert.equal(pendingActivity(restarted, []), null);
+  assert.deepEqual(activityAnchors(restarted.messages), {}, "Restart removes old attachment anchors.");
+}
+for (const text of [...steps[6].choices.map(choice => choice.text), "Saya mahu terus berbincang."]) {
+  const ready = beforeStep(6);
+  assert.equal(activityAnchors(ready.messages).evidence, undefined, "The missing-tool prompt does not reveal the record yet.");
+  const sent = reduce(ready, { type: "send", text, time });
+  const selectedReply = sent.queue[0];
+  assert.equal(pendingActivity(sent, ["buddy"]), "evidence", "Find evidence before the branch reveals where the tools were stored.");
+  assert.equal(activityAnchors(sent.messages).evidence, sent.messages.at(-1).id);
+  assert.equal(pendingActivity(sent, ["buddy", "buddy"]), "evidence", "Repeating the earlier completion cannot bypass the detective activity.");
+  assert.equal(pendingActivity(sent, ["evidence"]), null);
+  assert.equal(pendingActivity(sent, ["buddy", "evidence", "evidence"]), null);
+  assert.equal(reduce(sent, { type: "send", text, time }), sent, "Double taps while an attachment is pending cannot submit another answer.");
+  const continued = reduce(sent, { type: "advance", time });
+  assert.equal(continued.messages.at(-1).text, selectedReply.text, "The selected seventh answer still gets its own resolution.");
+  assert.equal(continued.messages.at(-1).sender, selectedReply.sender);
+  assert.equal(pendingActivity(continued, []), null, "The detective gate cannot recur after its branch response.");
+  assert.equal(activityAnchors(continued.messages).evidence, sent.messages.at(-1).id);
+  assert.deepEqual(continued.counts, sent.counts);
+  assert.equal(pendingActivity(reduce(sent, { type: "restart" }), []), null);
+}
+const completed = [];
+const visitedActivities = [];
+let withActivities = initialConversation();
+while (withActivities.queue.length || withActivities.turn < steps.length) {
+  const activity = pendingActivity(withActivities, completed);
+  if (activity) {
+    visitedActivities.push(activity);
+    const snapshot = structuredClone(withActivities);
+    completed.push(activity);
+    assert.equal(pendingActivity(withActivities, completed), null);
+    assert.deepEqual(withActivities, snapshot, "Completing an attachment does not mutate the story state.");
+  } else if (withActivities.queue.length) {
+    withActivities = reduce(withActivities, { type: "advance", time });
+  } else {
+    withActivities = reduce(withActivities, { type: "send", text: steps[withActivities.turn].choices[0].text, time });
+  }
+}
+assert.deepEqual(visitedActivities, ["buddy", "evidence"], "Both interactions occur once, in story order.");
+assert.deepEqual(withActivities, beforeStep(8), "Adding interactions preserves the original transcript, IDs, ending, and ethics profile.");
+assert.equal(pendingActivity(withActivities, []), null, "Neither interaction appears after the ending.");
+assert.equal(new Set(toolRecords.map(record => record.id)).size, toolRecords.length, "Record choices need unique identifiers.");
+assert.equal(toolRecords.filter(record => record.id === EVIDENCE_RECORD_ID).length, 1, "There is exactly one evidence row to share.");
+assert.match(toolRecords.find(record => record.id === EVIDENCE_RECORD_ID).text, /AJK.*kotak peralatan.*stor komuniti/, "The clue supports the existing resolution.");
+assert.ok(toolRecords.some(record => record.id !== EVIDENCE_RECORD_ID), "The detective card requires observing more than one record.");
+
 // Verify ethics profiles: pure deontology, pure utilitarianism, pure care, and balanced tie.
 for (const lens of ["deontology", "utilitarianism", "care"]) {
   let s = flush(initialConversation());
@@ -159,7 +236,7 @@ const socialTexts = [
   ...["aina", "lim", "admin", "amir"].flatMap(sender => ["s12", "s23", "s15", "s24", "s08", "s34", "s37", "s06"].map(id => stickerReply({ sender, text: "" }, id).message.text)),
   "Reaksi anda", "Membalas emoji anda",
 ];
-for (const sentence of [...storyTexts, ...socialTexts]) {
+for (const sentence of [...storyTexts, ...socialTexts, ...activityTexts]) {
   const segments = tokenizeText(sentence);
   assert.equal(segments.map(s => s.text).join(""), sentence);
   for (const seg of segments) {
@@ -180,5 +257,5 @@ function inspect(dir) {
   }
 }
 inspect("features/chat");
-console.log("PASS: contextual replies for every story message × 6 reactions, 8 semantic emoji replies, all 6561 eight-question routes, 24 distinct option responses, 3-lens ethics profile, 100% bilingual dictionary coverage, one Amir arrival after question 3, endings, Unicode limits, duplicate-send prevention, restart, viewport geometry, reduced motion, and no chat persistence.");
+console.log("PASS: contextual replies for every story message × 6 reactions, 8 semantic emoji replies, all 6561 eight-question routes, 24 distinct option responses, buddy/evidence gates for all choices and fallbacks, stable activity anchors, 3-lens ethics profile, 100% bilingual story/social/activity dictionary coverage, one Amir arrival after question 3, endings, Unicode limits, duplicate-send prevention, restart, viewport geometry, reduced motion, and no chat persistence.");
 
