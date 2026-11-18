@@ -1,7 +1,6 @@
 export type SenderId = "aina" | "lim" | "admin" | "amir" | "you" | "system";
 export type MessageDraft = { sender: SenderId; text: string };
 export type ChatMessage = MessageDraft & { id: number; time: string };
-export type Reflection = { title: string; text: string };
 export type EthicsLens = "deontology" | "utilitarianism" | "care";
 export type EthicsProfileId = EthicsLens | "balanced";
 export type EthicsCounts = Record<EthicsLens, number>;
@@ -16,7 +15,6 @@ export type ReplyChoice = {
   text: string;
   lens: EthicsLens;
   replies: MessageDraft[];
-  ending?: Reflection;
 };
 export type StoryStep = {
   id: string;
@@ -33,8 +31,6 @@ export type ConversationState = {
   nextId: number;
   firstChoice: string | null;
   counts: EthicsCounts;
-  lastLens: EthicsLens | null;
-  ending: Reflection | null;
 };
 export type ConversationAction =
   | { type: "advance"; time: string }

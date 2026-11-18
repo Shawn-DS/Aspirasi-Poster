@@ -104,33 +104,56 @@ export const steps: StoryStep[] = [
     fallback: [{ sender: "admin", text: "Kita boleh mengimbangi rasa selamat komuniti dengan layanan yang adil terhadap Amir." }],
   },
   {
-    id: "open-conversation", title: "Dilema 3: Ruang dalam komuniti",
-    prompt: { sender: "admin", text: "Amir memohon untuk menyertai kumpulan WhatsApp penduduk ini. Bagaimana kita patut menguruskan kemasukannya?" },
+    id: "majority-justice", title: "Dilema 3: Adakah majoriti sentiasa adil?",
+    prompt: { sender: "lim", text: "Kalau kebanyakan jiran menolak bekas banduan seperti Amir, adakah kita patut ikut keputusan majoriti sahaja?" },
     choices: [
       {
-        id: "gradual-harmony", lens: "utilitarianism",
-        text: "Bawa Amir masuk dengan panduan kumpulan yang jelas supaya keharmonian dan keselesaan semua ahli terjaga.",
-        replies: [{ sender: "lim", text: "Dengan garis panduan yang jelas, majoriti penduduk akan berasa lebih tenang menerima ahli baharu." }],
+        id: "majority-rights", lens: "deontology",
+        text: "Keputusan majoriti mesti menghormati maruah setiap orang. Amir tidak patut ditolak hanya kerana masa lalunya.",
+        replies: [{ sender: "admin", text: "Prinsip itu menghadkan kuasa majoriti: penerimaan seseorang perlu dinilai secara adil, bukan berdasarkan label." }],
       },
       {
-        id: "warm-welcome", lens: "care",
-        text: "Jemput Amir masuk dengan sapaan mesra dan beri ruang dia berkongsi mengikut keselesaannya sendiri.",
-        replies: [{ sender: "aina", text: "Setuju. Sapaan yang lembut boleh mengurangkan rasa kekok antara kita semua." }],
+        id: "majority-outcomes", lens: "utilitarianism",
+        text: "Bincang sebab bantahan dan cari aturan yang memberi manfaat kepada semua, termasuk Amir.",
+        replies: [{ sender: "lim", text: "Jadi kita menimbang kesan kepada seluruh komuniti, termasuk kesan peminggiran terhadap Amir, sebelum membuat keputusan." }],
       },
       {
-        id: "equal-member", lens: "deontology",
-        text: "Sebagai penduduk sah di lorong ini, Amir mempunyai hak yang sama untuk menyertai kumpulan tanpa syarat tambahan.",
-        replies: [{ sender: "admin", text: "Tepat. Hak penyertaan dalam komuniti terpakai sama rata kepada setiap penduduk." }],
+        id: "majority-dialogue", lens: "care",
+        text: "Dengar kebimbangan jiran dan pandangan Amir sendiri supaya keputusan lahir daripada saling memahami.",
+        replies: [{ sender: "aina", text: "Saya mahu mendengar ceritanya sendiri. Hubungan sukar dibina jika kita terus bercakap tentangnya tanpa mendengarnya." }],
       },
     ],
-    fallback: [{ sender: "admin", text: "Amir sudah bersetuju untuk masuk. Mari sambut dengan hormat." }],
+    fallback: [{ sender: "admin", text: "Suara majoriti perlu dipertimbangkan bersama maruah individu, kesan keputusan dan hubungan sesama jiran." }],
+  },
+  {
+    id: "nation-building", title: "Dilema 4: Peluang kedua dan negara bangsa",
+    prompt: { sender: "admin", text: "Apakah kesan menerima atau meminggirkan bekas banduan terhadap perpaduan dan pembinaan negara bangsa?" },
+    choices: [
+      {
+        id: "nation-equality", lens: "deontology",
+        text: "Negara bangsa yang adil memerlukan layanan setara. Bekas banduan juga sebahagian daripada masyarakat dan berhak dihormati.",
+        replies: [{ sender: "admin", text: "Layanan setara menjadikan nilai keadilan sesuatu yang diamalkan, termasuk terhadap mereka yang pernah melakukan kesalahan." }],
+      },
+      {
+        id: "nation-cooperation", lens: "utilitarianism",
+        text: "Sokongan untuk kembali bekerja dan menyumbang boleh meningkatkan kesejahteraan bersama serta mengukuhkan perpaduan.",
+        replies: [{ sender: "lim", text: "Peluang kedua perlu disertai sokongan yang terancang. Manfaatnya boleh dirasai oleh bekas banduan dan seluruh masyarakat." }],
+      },
+      {
+        id: "nation-belonging", lens: "care",
+        text: "Rasa diterima membina kepercayaan dan rasa memiliki. Kita perlu mendengar serta menyokong jiran yang dipinggirkan.",
+        replies: [{ sender: "aina", text: "Perpaduan bermula apabila seseorang berasa dirinya dihargai. Ihsan boleh diamalkan melalui hubungan harian kita." }],
+      },
+    ],
+    fallback: [{ sender: "admin", text: "Cara kita melayan bekas banduan mencerminkan keadilan, kesejahteraan dan rasa memiliki dalam negara bangsa." }],
     transition: [
+      { sender: "admin", text: "Amir bersetuju untuk menyertai kumpulan ini. Mari kita dengar sendiri apa yang ingin dikongsikannya." },
       { sender: "system", text: "Admin Komuniti menambah Amir." },
       { sender: "amir", text: "Salam semua, saya Amir. Saya sudah menjalani hukuman dan mahu membina hidup baharu dengan jujur di sini." },
     ],
   },
   {
-    id: "community-activity", title: "Dilema 4: Menyertai aktiviti bersama",
+    id: "community-activity", title: "Dilema 5: Menyertai aktiviti bersama",
     prompt: { sender: "amir", text: "Ahad ini ada gotong-royong taman. Boleh saya turut serta membantu bersama jiran-jiran?" },
     choices: [
       {
@@ -152,92 +175,23 @@ export const steps: StoryStep[] = [
     fallback: [{ sender: "amir", text: "Terima kasih berbual. Saya harap kita dapat saling mengenali semasa aktiviti nanti." }],
   },
   {
-    id: "fair-participation", title: "Dilema 5: Amanah dan pengurusan risiko",
-    prompt: { sender: "lim", text: "Semasa gotong-royong nanti, peralatan dan kunci stor komuniti akan digunakan. Bagaimana kita uruskan supaya wajar untuk semua?" },
-    choices: [
-      {
-        id: "supervise-risk", lens: "utilitarianism",
-        text: "Biar AJK lama sahaja memegang kunci stor utama buat masa ini demi mengelakkan kerisauan ramai penduduk.",
-        replies: [{ sender: "lim", text: "Cara itu mengelakkan keresahan majoriti jiran buat masa ini, walaupun Amir mungkin terasa sedikit dibezakan." }],
-      },
-      {
-        id: "same-rules", lens: "deontology",
-        text: "Gunakan buku rekod pinjaman yang sama untuk setiap peserta tanpa sebarang layanan dua darjat terhadap Amir.",
-        replies: [{ sender: "admin", text: "Adil dan berprinsip. Peraturan yang sama terpakai kepada semua tanpa pengecualian." }],
-      },
-      {
-        id: "buddy-support", lens: "care",
-        text: "Bekerja secara berpasangan supaya semua jiran dapat saling membantu dan membina kepercayaan secara semula jadi.",
-        replies: [{ sender: "aina", text: "Elok begitu. Bila bekerja berdua, hubungan jadi lebih rapat dan tiada siapa rasa terasing." }],
-      },
-    ],
-    fallback: [{ sender: "admin", text: "Kita bincang pembahagian tugas bersama, dengan panduan yang wajar untuk semua." }],
-  },
-  {
-    id: "privacy", title: "Dilema 6: Privasi atau makluman jiran",
-    prompt: { sender: "aina", text: "Ada jiran lorong sebelah bertanya sama ada kita patut memaklumkan latar belakang Amir kepada penduduk lain sebagai langkah berjaga-jaga. Apa pandangan anda?" },
-    choices: [
-      {
-        id: "strict-privacy", lens: "deontology",
-        text: "Tidak wajar. Privasi dan kisah silam Amir ialah hak peribadi yang wajib dilindungi daripada disebarkan.",
-        replies: [{ sender: "amir", text: "Terima kasih kerana mempertahankan hak privasi saya. Saya mahu dinilai melalui kehidupan saya hari ini." }],
-      },
-      {
-        id: "controlled-info", lens: "utilitarianism",
-        text: "Jika khabar angin mula mencetuskan panik ramai orang, biar AJK beri penjelasan ringkas dan terkawal agar keadaan tenang.",
-        replies: [{ sender: "admin", text: "Pendekatan itu cuba mengawal keresahan majoriti, namun kita perlu berhati-hati agar tidak melukai maruah Amir." }],
-      },
-      {
-        id: "personal-choice", lens: "care",
-        text: "Tanya perasaan Amir dahulu dan bantu perkenalkan dia secara peribadi mengikut apa yang dia sendiri selesa kongsikan.",
-        replies: [{ sender: "amir", text: "Saya amat menghargainya. Lebih mudah jika saya sendiri yang bercerita apabila sudah bersedia." }],
-      },
-    ],
-    fallback: [{ sender: "admin", text: "Hormati privasi Amir sambil menjaga keharmonian kejiranan." }],
-  },
-  {
-    id: "presumption-of-innocence", title: "Dilema 7: Apabila timbul syak wasangka",
-    prompt: { sender: "lim", text: "Selepas gotong-royong, kotak peralatan di pondok tidak kelihatan. Ada penduduk mula mengesyaki Amir. Bagaimana kita bertindak?" },
-    choices: [
-      {
-        id: "open-check", lens: "utilitarianism",
-        text: "Untuk segera meredakan syak wasangka ramai orang, minta semua petugas di pondok tadi sama-sama memeriksa barang secara terbuka.",
-        replies: [{ sender: "admin", text: "Semasa pemeriksaan dibuat, AJK memaklumkan kotak itu sudah disimpan di stor. Keadaan kembali tenang walaupun suasana tadi agak tegang." }],
-      },
-      {
-        id: "calm-reassure", lens: "care",
-        text: "Tenangkan suasana dahulu dan tanya semua petugas termasuk Amir dengan penuh hormat supaya tiada hati yang terluka.",
-        replies: [{ sender: "aina", text: "Lega kita bertanya dengan lembut. Rupa-rupanya AJK sudah simpan di stor; perasaan Amir pun terjaga." }],
-      },
-      {
-        id: "presume-innocent", lens: "deontology",
-        text: "Pegang prinsip anggapan tidak bersalah: jangan menuduh sesiapa tanpa bukti sahih, semak rekod penyimpanan dahulu.",
-        replies: [{ sender: "lim", text: "Betul kata anda. Selepas disemak, rupa-rupanya AJK sudah simpan di stor komuniti. Mujur kita berpegang pada prinsip!" }],
-      },
-    ],
-    fallback: [{ sender: "admin", text: "Selepas disemak, AJK bertugas telah menyimpan kotak itu di dalam stor." }],
-  },
-  {
-    id: "next-step", title: "Dilema 8: Pegangan etika masa hadapan",
-    prompt: { sender: "admin", text: "Melalui pengalaman bersama Amir ini, apakah asas etika paling penting yang patut menjadi pegangan kejiranan kita?" },
+    id: "next-step", title: "Dilema 6: Daripada pendirian kepada tindakan",
+    prompt: { sender: "admin", text: "Selepas berbual dan menyusun pasukan bersama Amir, prinsip etika manakah akan memandu tindakan anda terhadap bekas banduan selepas ini?" },
     choices: [
       {
         id: "principle-justice", lens: "deontology",
         text: "Prinsip keadilan & hak: setiap insan yang telah menjalani hukuman wajib dilayan setara di bawah peraturan yang sama.",
         replies: [{ sender: "admin", text: "Prinsip keadilan yang teguh memastikan tiada sesiapa dinafikan haknya kerana sejarah lalu." }],
-        ending: { title: "Keadilan sebagai kewajipan moral.", text: "Anda menegaskan bahawa peluang kedua ialah hak yang wajib dihormati, bukan sekadar ehsan. Peraturan yang adil melindungi maruah setiap individu." },
       },
       {
         id: "collective-good", lens: "utilitarianism",
         text: "Kesejahteraan bersama: integrasi semula yang terancang memberi manfaat keselamatan dan keharmonian kepada seluruh masyarakat.",
         replies: [{ sender: "lim", text: "Apabila bekas banduan dibantu berfungsi semula dalam komuniti yang teratur, seluruh kejiranan menjadi lebih selamat dan sejahtera." }],
-        ending: { title: "Harmoni dan kebaikan bersama.", text: "Anda melihat peluang kedua daripada sudut kesan jangka panjang: masyarakat yang menyokong pemulihan secara terancang akan melahirkan komuniti yang lebih selamat untuk semua." },
       },
       {
         id: "care-connection", lens: "care",
         text: "Etika keprihatinan & ihsan: mendengar dengan empati dan membina hubungan manusiawi yang memulihkan kepercayaan.",
         replies: [{ sender: "amir", text: "Terima kasih kerana melihat saya sebagai jiran dan manusia. Rasa dipedulikan inilah yang memberi kekuatan untuk saya terus berubah." }],
-        ending: { title: "Kepercayaan tumbuh melalui keprihatinan.", text: "Anda memilih untuk mendengar, memahami kebimbangan setiap pihak dan menemani seseorang membina hidup baharu. Hubungan yang berihsan mengubah ketakutan menjadi persefahaman." },
       },
     ],
     fallback: [{ sender: "admin", text: "Setiap perspektif etika membantu kita membina komuniti yang lebih matang." }],
@@ -251,22 +205,22 @@ export const opening: MessageDraft[] = [
 ];
 
 export const openingReflections: Record<string, MessageDraft> = {
-  rights: { sender: "admin", text: "Pada awal tadi anda menekankan prinsip hak dan keadilan. Sepanjang 8 dilema ini, kita melihat bagaimana prinsip itu diuji dalam situasi sebenar. 🌿" },
+  rights: { sender: "admin", text: "Pada awal tadi anda menekankan prinsip hak dan keadilan. Sepanjang 6 dilema ini, kita melihat bagaimana prinsip itu diuji dalam situasi sebenar. 🌿" },
   outcomes: { sender: "admin", text: "Pada awal tadi anda mengutamakan keselamatan dan kesejahteraan bersama. Perbualan ini menunjukkan cabaran mengimbangi ketenteraman ramai dengan hak individu. 🌿" },
   empathy: { sender: "admin", text: "Pada awal tadi anda memilih pendekatan empati dan hubungan manusiawi. Setiap respons menunjukkan betapa pentingnya mendengar kedua-dua pihak. 🌿" },
 };
 
 export const copy = {
   title: "Peluang Kedua", titleAccent: "Dalam Kejiranan Kita",
-  intro: "Sertai perbualan kejiranan dan terokai 8 dilema etika melalui prinsip hak (Deontologi), kesejahteraan majoriti (Utilitarianisme) dan hubungan empati (Ethics of Care).",
-  badge: "SIMULASI DILEMA ETIKA", duration: "8 dilema etika (~3 minit)", privacy: "Tiada rekod jawapan atau perbualan",
-  simulation: "Simulasi 8 dilema etika komuniti", today: "HARI INI", promptEnd: "Refleksi Perspektif Etika",
-  stepEnd: "SELESAI", placeholder: "Tulis mesej…", send: "Hantar mesej", typing: "sedang menaip…", waiting: "Dengar dahulu, kemudian pilih pendirian anda.",
-  newMessages: "Mesej baharu", restart: "Mulakan semula", suggestions: "Pilih pendekatan etika anda", showSuggestions: "Lihat cadangan",
+  intro: "Sertai perbualan kejiranan dan terokai 6 dilema etika melalui prinsip hak (Deontologi), kesejahteraan majoriti (Utilitarianisme) dan hubungan empati (Ethics of Care).",
+  badge: "SIMULASI DILEMA ETIKA", duration: "6 dilema etika · 1 aktiviti", privacy: "Statistik pilihan tanpa identiti",
+  simulation: "Simulasi 6 dilema etika komuniti", today: "HARI INI", promptEnd: "Refleksi Perspektif Etika",
+  stepEnd: "SELESAI", typing: "sedang menaip…", waiting: "Dengar dahulu, kemudian pilih pendirian anda.",
+  newMessages: "Mesej baharu", restart: "Mulakan semula", suggestions: "Pilih pendekatan etika anda",
   ethicsResultLabel: "PROFIL PERTIMBANGAN ETIKA ANDA",
-  endTitle: "Satu perbualan ialah permulaan.", endText: "Setiap dilema etika menuntut kita menimbang antara hak individu, keselamatan komuniti dan hubungan sesama manusia.", endNote: "Memahami pelbagai sudut etika membantu kita membina masyarakat yang lebih adil dan berihsan.",
+  endNote: "Amalkan keadilan, kerjasama dan ihsan supaya setiap jiran dapat menyumbang kepada negara bangsa.",
   footer: "MPU1032 ASPIRASI NEGARA BANGSA",
-  about: "Kenali Taman Harmoni", close: "Tutup", aboutText: "Kenali jiran baharu kita dan lihat bagaimana Deontologi, Utilitarianisme serta Ethics of Care membentuk keputusan komuniti dalam lapan dilema etika.",
+  about: "Kenali Taman Harmoni", close: "Tutup", aboutText: "Kenali jiran baharu kita dan lihat bagaimana Deontologi, Utilitarianisme serta Ethics of Care membentuk keputusan komuniti dalam enam dilema etika.",
   aboutSubtitle: "Tiga perspektif etika dalam komuniti kejiranan", announcementLabel: "PENGUMUMAN KOMUNITI", announcement: "Di sini, setiap pandangan dibincangkan dengan tenang antara prinsip keadilan, kesejahteraan bersama dan empati.",
-  peopleLabel: "KENALI JIRAN ANDA", communityQuestion: "Bagaimana kita mengimbangi hak individu, keselamatan ramai dan rasa prihatin?", backToChat: "Kembali ke perbualan", simulationNote: "Simulasi perbualan interaktif tanpa rekod jawapan",
+  peopleLabel: "KENALI JIRAN ANDA", communityQuestion: "Bagaimana kita mengimbangi hak individu, keselamatan ramai dan rasa prihatin?", backToChat: "Kembali ke perbualan", simulationNote: "Statistik pilihan dikongsi tanpa identiti. Perbualan tidak disimpan.",
 };

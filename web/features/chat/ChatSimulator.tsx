@@ -1,11 +1,10 @@
 "use client";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowLeft, BookOpen, Check, Clock3, Info, Leaf, MessageCircle, RotateCcw, ShieldCheck, Smile, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, BookOpen, Check, Clock3, Info, Leaf, MessageCircle, RotateCcw, ShieldCheck, Smile, Volume2, VolumeX } from "lucide-react";
 import type { WordLookupResult } from "./data/dictionary";
-import { STICKER_PACK } from "./data/stickers";
-import { activityCopy, type ActivityId } from "./data/activities";
+import { activityCopy } from "./data/activities";
 import { activityAnchors } from "./lib/activities";
-import { communityProfiles, copy, ethicsLensMeta, group, people } from "./data/story";
+import { copy, group, people, steps } from "./data/story";
 import { LENS_VIBRATION } from "./lib/conversation";
 import { sound } from "./lib/sound";
 import { useConversation } from "./hooks/useConversation";
@@ -17,10 +16,14 @@ import MessageBubble, { ChatStickerBubble } from "./components/MessageBubble";
 import TypingIndicator from "./components/TypingIndicator";
 import ReplyChoices from "./components/ReplyChoices";
 import ChatActivity from "./components/ChatActivity";
+import ReflectionCard, { MAX_MASCOT_QUOTES } from "./components/ReflectionCard";
+import WordPopover from "./components/WordPopover";
+import StickerDrawer from "./components/StickerDrawer";
+import CommunityDialog from "./components/CommunityDialog";
 import TranslatableText, { type ActiveWordState } from "./components/TranslatableText";
 import type { EthicsLens, EthicsProfileId } from "./types";
-
-const LENS_ORDER: EthicsLens[] = ["deontology", "utilitarianism", "care"];
+import StatisticsResult from "../statistics/StatisticsResult";
+import type { StatisticsSyncState } from "../statistics/client";
 
 const CHAPTER_MASCOT_LABELS: Record<EthicsProfileId | "seed", string> = {
   seed: "🌱 Tunas Etika",
@@ -30,32 +33,12 @@ const CHAPTER_MASCOT_LABELS: Record<EthicsProfileId | "seed", string> = {
   balanced: "🌿 Seimbang",
 };
 
-const MAX_MASCOT_QUOTES = 3;
-
-const MASCOT_QUOTES: Record<EthicsProfileId, [string, string, string]> = {
-  deontology: [
-    "Prinsip yang teguh melindungi maruah setiap insan! ⚖️✨",
-    "Hak setara untuk semua jiran di Taman Harmoni! 🤝",
-    "Keadilan bukan sekadar ehsan, tetapi tanggungjawab bersama! 📜",
-  ],
-  utilitarianism: [
-    "Keharmonian dan keselamatan kejiranan terjaga bersama! 🌟🏡",
-    "Langkah bijak mengimbangi ketenteraman ramai dan peluang kedua! 🛡️",
-    "Komuniti yang teratur melahirkan kejiranan yang sejahtera! 🤝",
-  ],
-  care: [
-    "Empati anda membina jambatan kepercayaan di Taman Harmoni! 💖🌱",
-    "Mendengar dengan hati mengubah rasa takut menjadi persefahaman! 🥹",
-    "Amir pasti menghargai sapaan dan keprihatinan anda! 🌸",
-  ],
-  balanced: [
-    "Hebat! Anda bijak mengimbangi prinsip, keselamatan dan empati! 🌿✨",
-    "Tiga perspektif etika berpadu untuk keharmonian Taman Harmoni! ⚖️🌟💖",
-    "Setiap situasi dinilai dengan matang dan berhemah! 🤝",
-  ],
-};
-
-export default function ChatSimulator() {
+export default function ChatSimulator({ onAnswer, onComplete, statisticsState, onRetryStatistics }: {
+  onAnswer: (questionId: string, choiceId: string) => void;
+  onComplete: () => void;
+  statisticsState: StatisticsSyncState;
+  onRetryStatistics: () => void;
+}) {
   const chat = useConversation();
   const social = useSocialInteractions(chat.messages);
   const [unread, setUnread] = useState(0);
@@ -82,6 +65,17 @@ export default function ChatSimulator() {
 
   const answeredCount = chat.counts.deontology + chat.counts.utilitarianism + chat.counts.care;
   const miniMascotState: EthicsProfileId | "seed" = answeredCount === 0 ? "seed" : chat.ethicsProfile.id;
+
+  useEffect(() => {
+    // Observe accepted reducer messages; rapid duplicate taps never emit a
+    // second answer. Decorative reactions and team arrangements are excluded.
+    chat.messages.filter(message => message.sender === "you").forEach((message, index) => {
+      const step = steps[index];
+      const choice = step?.choices.find(option => option.text === message.text);
+      if (choice) onAnswer(step.id, choice.id);
+    });
+    if (chat.complete) onComplete();
+  }, [chat.messages, chat.complete, onAnswer, onComplete]);
 
   useEffect(() => {
     sound.startBgm(chat.complete ? "complete" : "thinking");
@@ -219,12 +213,6 @@ export default function ChatSimulator() {
     setMascotPokes(n => Math.min(MAX_MASCOT_QUOTES, n + 1));
   }
 
-  const profileQuotes = MASCOT_QUOTES[chat.ethicsProfile.id];
-  const activeMascotQuote =
-    mascotPokes > 0 && mascotPokes <= MAX_MASCOT_QUOTES
-      ? profileQuotes[mascotPokes - 1]
-      : null;
-
   return <main className="experience" ref={root}>
     <section className="story-panel" aria-labelledby="project-title">
       <a className="project-brand" href="/"><span><MessageCircle size={22} /></span>peluang<span className="brand-light">kedua</span><i /></a>
@@ -308,9 +296,7 @@ export default function ChatSimulator() {
                   onReact={social.react}
                   onSelectWord={selectWord}
                 />
-                {(["buddy", "evidence"] as ActivityId[]).filter(id => attachments[id] === message.id).map(id => (
-                  <ChatActivity key={id} id={id} onComplete={() => chat.finishActivity(id)} onUpdate={activityUpdated} activeWordId={activeWord?.id} onSelectWord={selectWord} />
-                ))}
+                {attachments.buddy === message.id && <ChatActivity id="buddy" onComplete={() => chat.finishActivity("buddy")} onUpdate={activityUpdated} activeWordId={activeWord?.id} onSelectWord={selectWord} />}
                 {interactions.map(entry => entry.stickerId ? (
                   <ChatStickerBubble key={`social-${entry.id}`} stickerId={entry.stickerId} time={entry.time} own autoReactEmoji={entry.autoReactEmoji} />
                 ) : entry.reply && (
@@ -332,82 +318,21 @@ export default function ChatSimulator() {
           })}
         </div>
         {chat.typing && <TypingIndicator sender={chat.typing} />}
-        {chat.complete && <section className={`reflection-card profile-${chat.ethicsProfile.id}`} aria-labelledby="reflection-title">
-          <div className="reflection-drip" aria-hidden="true">
-            <svg viewBox="0 0 400 28" preserveAspectRatio="none">
-              <path d="M0 0 H400 V12 C382 12 376 26 360 26 C344 26 340 10 322 10 C304 10 298 24 280 24 C262 24 256 11 238 11 C220 11 214 27 196 27 C178 27 172 10 154 10 C136 10 130 25 112 25 C94 25 88 11 70 11 C52 11 46 24 28 24 C12 24 8 12 0 12 Z" />
-            </svg>
-          </div>
-          <div className="reflection-mascot-wrap">
-            {activeMascotQuote && (
-              <div key={mascotPokes} className="reflection-mascot-speech" role="status">
-                {activeMascotQuote}
-              </div>
-            )}
-            <button
-              key={mascotPokes}
-              type="button"
-              className={`reflection-mascot-btn${mascotPokes > 0 ? " is-poked" : ""}`}
-              onClick={handleReflectionMascotClick}
-              disabled={mascotPokes >= MAX_MASCOT_QUOTES}
-              aria-label="Ketik maskot etika untuk mesej semangat"
-              title={mascotPokes < MAX_MASCOT_QUOTES ? "Ketik maskot!" : undefined}
-            >
-              {mascotPokes > 0 && (
-                <span className="mascot-poke-sparkles" aria-hidden="true">
-                  <i className="sp-1">✨</i>
-                  <i className="sp-2">🌟</i>
-                  <i className="sp-3">💫</i>
-                </span>
-              )}
-              <EthicsSticker type={chat.ethicsProfile.id} size={96} className="reflection-mascot" />
-              {mascotPokes < MAX_MASCOT_QUOTES && (
-                <span className="mascot-tap-hint">
-                  <Sparkles size={11} />
-                  {mascotPokes === 0 ? "Ketik saya!" : `Ketik lagi (${mascotPokes}/${MAX_MASCOT_QUOTES})`}
-                </span>
-              )}
-            </button>
-          </div>
-          <p className="reflection-ethics-badge">{chat.ethicsProfile.badge}</p>
-          <h2 id="reflection-title"><TranslatableText text={chat.ethicsProfile.title} prefixId="ref-title" activeId={activeWord?.id} onSelectWord={selectWord} /></h2>
-          <div className="reflection-ethics">
-            <ul className="ethics-breakdown" aria-label={copy.ethicsResultLabel}>
-              {LENS_ORDER.map(lens => {
-                const count = chat.counts[lens];
-                const pct = Math.round((count / chat.totalSteps) * 100);
-                return <li key={lens} className={`lens-${lens}`}>
-                  <div className="ethics-row-head">
-                    <strong>{ethicsLensMeta[lens].name} <span>({ethicsLensMeta[lens].subtitle})</span></strong>
-                    <b>{count} / {chat.totalSteps}</b>
-                  </div>
-                  <div className="ethics-row-bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>
-                </li>;
-              })}
-            </ul>
-            <p className="reflection-ethics-summary"><TranslatableText text={chat.ethicsProfile.summary} prefixId="ref-sum" activeId={activeWord?.id} onSelectWord={selectWord} /></p>
-          </div>
-          <button onClick={restart}><RotateCcw size={15} />{copy.restart}</button>
-        </section>}
+        {chat.complete && (
+          <ReflectionCard
+            ethicsProfile={chat.ethicsProfile}
+            counts={chat.counts}
+            totalSteps={chat.totalSteps}
+            mascotPokes={mascotPokes}
+            activeWordId={activeWord?.id}
+            onPokeMascot={handleReflectionMascotClick}
+            onSelectWord={selectWord}
+            onRestart={restart}
+          />
+        )}
+        {chat.complete && <StatisticsResult state={statisticsState} retry={onRetryStatistics} />}
       </div>
-      {activeWord && <div
-        className={`word-popover ${activeWord.placeBelow ? "place-below" : "place-above"}`}
-        style={{
-          left: `${activeWord.x}px`,
-          top: `${activeWord.placeBelow ? activeWord.bottom + 8 : activeWord.y - 8}px`,
-        }}
-        role="status"
-        aria-live="polite"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="word-popover-head">
-          <strong>{activeWord.lookup.word}</strong>
-          {activeWord.lookup.key !== activeWord.lookup.word.toLowerCase() && <span className="word-popover-stem">({activeWord.lookup.key})</span>}
-          <button type="button" className="word-popover-close" aria-label="Tutup terjemahan" onClick={() => setActiveWord(null)}><X size={13} /></button>
-        </div>
-        <div className="word-popover-row"><span className="word-lang-badge zh">中文</span><span>{activeWord.lookup.zh}</span></div>
-        <div className="word-popover-row"><span className="word-lang-badge en">EN</span><span>{activeWord.lookup.en}</span></div>
-      </div>}
+      {activeWord && <WordPopover activeWord={activeWord} onClose={() => setActiveWord(null)} />}
       {effect && <div key={effect.key} className={`choice-effect lens-${effect.lens}`} aria-hidden="true">
         <div className={`sticker-burst-stage burst-${effect.lens}`}>
           <span className="burst-halo" />
@@ -428,37 +353,11 @@ export default function ChatSimulator() {
       {unread > 0 && <button className="new-messages" onClick={scrollToNew}><ArrowDown size={15} />{copy.newMessages}<span>{unread}</span></button>}
       <footer className="chat-composer" onClick={e => e.stopPropagation()}>
         {stickerDrawerOpen && (
-          <div className="sticker-drawer" role="dialog" aria-label="Emoji komuniti" style={{ maxHeight: drawerHeight }} onKeyDown={e => { if (e.key === "Escape") setStickerDrawerOpen(false); }}>
-            <div className="sticker-drawer-head">
-              <strong>Emoji Komuniti · 8 pilihan</strong>
-              <button
-                type="button"
-                className="sticker-drawer-close"
-                onClick={() => setStickerDrawerOpen(false)}
-                aria-label="Tutup emoji"
-              >
-                <X size={15} />
-              </button>
-            </div>
-            <div className="sticker-drawer-grid">
-              {STICKER_PACK.map(stk => (
-                <button
-                  key={stk.id}
-                  type="button"
-                  className="sticker-drawer-item"
-                  onClick={() => handleSendSticker(stk.id)}
-                  aria-label={`Hantar ${stk.caption} (${stk.meaning})`}
-                  title={`${stk.caption} · ${stk.meaning}`}
-                >
-                  <img src={stk.src} alt={stk.caption} loading="lazy" draggable={false} />
-                  <strong className="sticker-item-caption" style={{ backgroundColor: stk.color }}>
-                    {stk.caption}
-                  </strong>
-                  <span className="sticker-item-meaning">{stk.meaning}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <StickerDrawer
+            maxHeight={drawerHeight}
+            onSelectSticker={handleSendSticker}
+            onClose={() => setStickerDrawerOpen(false)}
+          />
         )}
         {chat.activity ? <div className="activity-composer">
           <span>{activityCopy.waiting}</span>
@@ -519,6 +418,6 @@ export default function ChatSimulator() {
       </footer>
     </section>
 
-    <dialog className="about-dialog community-dialog" ref={dialog} aria-labelledby="community-title" onClick={e => { if (e.target === e.currentTarget) dialog.current?.close(); }}><div className="dialog-heading"><Avatar group /><button className="icon-button" aria-label={copy.close} onClick={() => dialog.current?.close()}><X size={21} /></button></div><p className="eyebrow">PERSATUAN PENDUDUK</p><h2 id="community-title">{copy.about}</h2><p className="community-subtitle">{copy.aboutSubtitle}</p><div className="community-announcement"><span>{copy.announcementLabel}</span><p>{copy.announcement}</p></div><p>{copy.aboutText}</p><p className="eyebrow profile-label">{copy.peopleLabel}</p><ul className="community-people">{communityProfiles.map(profile => <li key={profile.sender}><Avatar sender={profile.sender} /><div><strong style={{ color: people[profile.sender].color }}>{people[profile.sender].name}</strong><span>{profile.role}</span><p>{profile.description}</p></div></li>)}</ul><div className="community-question"><Leaf size={21} /><p>{copy.communityQuestion}</p></div><p className="community-simulation">{copy.simulationNote}</p><button className="dialog-close" onClick={() => dialog.current?.close()}>{copy.backToChat}</button></dialog>
+    <CommunityDialog ref={dialog} />
   </main>;
 }

@@ -1,17 +1,13 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { build } from "esbuild";
+import { importSource } from "./helpers.mjs";
 
-async function importSource(path) {
-  const result = await build({ entryPoints: [path], bundle: true, write: false, format: "esm", platform: "node" });
-  return import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString("base64")}`);
-}
 const { conversationReducer: reduce, getEthicsProfile, initialConversation, LENS_VIBRATION, messageDelay } = await importSource("features/chat/lib/conversation.ts");
-const { opening, openingReflections, steps } = await importSource("features/chat/data/story.ts");
+const { opening, openingReflections, steps, people } = await importSource("features/chat/data/story.ts");
 const { reactionReply, stickerReply } = await importSource("features/chat/lib/socialReplies.ts");
 const { activityAnchors, pendingActivity } = await importSource("features/chat/lib/activities.ts");
-const { activityTexts, EVIDENCE_RECORD_ID, toolRecords } = await importSource("features/chat/data/activities.ts");
+const { activityTexts, resolveBuddyOutcome } = await importSource("features/chat/data/activities.ts");
 const emojis = ["👍", "❤️", "🙏", "😮", "😢", "🤝"];
 const allIncoming = [opening[1], ...steps.flatMap(step => [step.prompt, ...step.choices.flatMap(choice => choice.replies), ...step.fallback, ...(step.transition ?? [])]), ...Object.values(openingReflections)].filter(m => m.sender !== "system");
 for (const source of allIncoming) {
@@ -23,9 +19,10 @@ for (const source of allIncoming) {
   }
 }
 assert.match(reactionReply(steps[1].prompt, "👍").text, /bukan bukti/, "Agreement with concern must not endorse prejudice.");
-assert.doesNotMatch(reactionReply(steps[6].prompt, "😮").text, /sudah ditemui/, "A reaction cannot reveal a future plot resolution.");
-assert.match(reactionReply(steps[6].choices[0].replies[0], "😢").text, /sudah ditemui/, "After resolution, acknowledge that the equipment was found.");
-assert.match(reactionReply(steps[6].fallback[0], "😮").text, /sudah ditemui/);
+const majorityReply = reactionReply(steps.find(step => step.id === "majority-justice").prompt, "👍");
+assert.match(majorityReply.text, /majoriti.*keadilan.*maruah/, "Agreeing with the discussion does not make majority rejection automatically just.");
+const nationReply = reactionReply(steps.find(step => step.id === "nation-building").prompt, "🤝");
+assert.match(nationReply.text, /perpaduan.*negara bangsa/, "The new nation-building debate has a relevant social response.");
 assert.equal(reactionReply({ sender: "you", text: "hello" }, "👍"), null);
 assert.equal(reactionReply(opening[1], null), null);
 assert.equal(reactionReply(opening[1], "unknown"), null);
@@ -49,7 +46,6 @@ const time = "12:00";
 const flush = state => { while (state.queue.length) state = reduce(state, { type: "advance", time }); return state; };
 let state = initialConversation();
 assert.equal(state.messages.length, 0);
-assert.equal(state.lastLens, null);
 assert.deepEqual(state.counts, { deontology: 0, utilitarianism: 0, care: 0 });
 assert.equal(reduce(state, { type: "send", text: "Too early", time }), state);
 state = flush(state);
@@ -60,12 +56,10 @@ for (const text of ["x".repeat(500), "😀".repeat(500), "<script>alert('x')</sc
   const sent = reduce(state, { type: "send", text, time });
   assert.equal(sent.messages.at(-1).text, text);
   assert.equal(sent.turn, 1);
-  assert.equal(sent.lastLens, null);
   assert.deepEqual(sent.counts, { deontology: 0, utilitarianism: 0, care: 0 });
   assert.equal(reduce(sent, { type: "send", text: "duplicate", time }), sent);
 }
-assert.equal(steps.length, 8);
-assert.equal(new Set(steps.map(step => step.id)).size, 8);
+assert.deepEqual(steps.map(step => step.id), ["second-chance", "neighbour-concern", "majority-justice", "nation-building", "community-activity", "next-step"], "The six-question story moves from four debates to participation and reflection.");
 for (const step of steps) {
   assert.equal(step.choices.length, 3);
   assert.equal(new Set(step.choices.map(choice => choice.text)).size, 3);
@@ -74,6 +68,15 @@ for (const step of steps) {
 }
 assert.equal(opening.some(m => m.sender === "amir"), false, "Discuss second chances before Amir arrives.");
 assert.deepEqual(opening.at(-1), steps[0].prompt);
+for (const step of steps.slice(0, 4)) {
+  const preJoin = [step.prompt, ...step.choices.flatMap(choice => choice.replies), ...step.fallback];
+  assert.equal(preJoin.some(message => message.sender === "amir"), false, "Amir cannot speak during the four debates before he joins.");
+}
+assert.deepEqual(steps.filter(step => step.transition?.some(message => message.sender === "system" && message.text.includes("menambah Amir"))).map(step => step.id), ["nation-building"], "Amir joins once, after the fourth debate.");
+const joinTransition = steps[3].transition;
+assert.equal(joinTransition[0].sender, "admin");
+assert.match(joinTransition[0].text, /Amir bersetuju/, "The invitation respects Amir's consent before adding him.");
+assert.match(reactionReply(joinTransition[0], "❤️").text, /Amir bersetuju/, "A reply to the invitation retains its consent context.");
 const routeTranscripts = new Set();
 function explore(s, path = []) {
   const step = steps[s.turn];
@@ -81,7 +84,6 @@ function explore(s, path = []) {
     const sent = reduce(s, { type: "send", text: choice.text, time });
     assert.equal(reduce(sent, { type: "send", text: choice.text, time }), sent, "Double taps cannot skip a question.");
     assert.equal(sent.turn, s.turn + 1);
-    assert.equal(sent.lastLens, choice.lens);
     assert.equal(sent.counts[choice.lens], s.counts[choice.lens] + 1);
     const expected = [...choice.replies, ...(step.transition ?? [])];
     if (steps[sent.turn]) expected.push(steps[sent.turn].prompt);
@@ -90,13 +92,19 @@ function explore(s, path = []) {
     const next = flush(sent);
     assert.equal(next.messages.filter(m => m.sender === "you").length, next.turn);
     assert.equal(new Set(next.messages.map(m => m.id)).size, next.messages.length);
-    if (next.turn < 3) assert.equal(next.messages.some(m => m.sender === "amir"), false);
-    if (next.turn >= 3) assert.equal(next.messages.filter(m => m.sender === "system" && m.text.includes("menambah Amir")).length, 1);
+    if (next.turn < 4) assert.equal(next.messages.some(m => m.sender === "amir"), false);
+    if (next.turn >= 4) {
+      assert.equal(next.messages.filter(m => m.sender === "system" && m.text.includes("menambah Amir")).length, 1);
+      const arrivalIndex = next.messages.findIndex(m => m.sender === "system" && m.text.includes("menambah Amir"));
+      const speechIndex = next.messages.findIndex(m => m.sender === "amir");
+      assert.ok(speechIndex > arrivalIndex, "Amir only speaks after the group has added him.");
+      assert.equal(next.messages.slice(0, arrivalIndex).filter(m => m.sender === "you").length, 4, "Four user answers must precede Amir's arrival.");
+    }
     if (next.turn < steps.length) explore(next, [...path, choice.id]);
     else {
-      assert.deepEqual(next.ending, choice.ending);
-      assert.equal(next.turn, 8);
-      assert.equal(next.counts.deontology + next.counts.utilitarianism + next.counts.care, 8);
+      assert.equal(next.turn, 6);
+      assert.equal(next.counts.deontology + next.counts.utilitarianism + next.counts.care, 6);
+      assert.deepEqual(next.messages.at(-1), { ...openingReflections[next.firstChoice], id: next.messages.at(-1).id, time });
       routeTranscripts.add(next.messages.map(m => m.text).join("\n"));
       assert.equal(reduce(next, { type: "send", text: "after ending", time }), next);
       assert.deepEqual(reduce(next, { type: "restart" }), initialConversation());
@@ -104,7 +112,7 @@ function explore(s, path = []) {
   }
 }
 explore(state);
-assert.equal(routeTranscripts.size, 3 ** 8, "All 6561 choice combinations must complete with distinct transcripts.");
+assert.equal(routeTranscripts.size, 3 ** 6, "All 729 choice combinations must complete with distinct transcripts.");
 
 // Attachments pause delivery at the relevant story boundary without becoming
 // extra ethics answers, changing the selected response, or revealing its ending.
@@ -115,46 +123,30 @@ function beforeStep(index) {
 }
 assert.deepEqual(activityAnchors([]), {});
 assert.equal(pendingActivity(initialConversation(), []), null);
-for (const text of [...steps[3].choices.map(choice => choice.text), "Saya mahu terus berbincang."]) {
-  const ready = beforeStep(3);
+const buddyStepIndex = steps.findIndex(step => step.id === "community-activity");
+for (const text of [...steps[buddyStepIndex].choices.map(choice => choice.text), "Saya mahu terus berbincang."]) {
+  const ready = beforeStep(buddyStepIndex);
   assert.deepEqual(activityAnchors(ready.messages), {}, "Earlier replies cannot create a buddy card.");
   const sent = reduce(ready, { type: "send", text, time });
-  assert.equal(pendingActivity(sent, []), null, "Amir must answer the actual fourth choice before the buddy card.");
+  assert.equal(pendingActivity(sent, []), null, "Amir must answer the actual fifth choice before the buddy card.");
   assert.equal(activityAnchors(sent.messages).buddy, undefined);
   const reply = reduce(sent, { type: "advance", time });
   assert.equal(reply.messages.at(-1).text, sent.queue[0].text, "Each original branch response is preserved.");
   assert.equal(pendingActivity(reply, []), "buddy");
-  assert.equal(reply.queue[0].text, steps[4].prompt.text, "Question five waits until pairing is complete.");
+  assert.equal(pendingActivity(structuredClone(reply), []), "buddy", "The story boundary depends on authored content, not object identity.");
+  assert.equal(reply.queue[0].text, steps[5].prompt.text, "Question six waits until pairing is complete.");
   assert.equal(activityAnchors(reply.messages).buddy, reply.messages.at(-1).id);
-  assert.equal(pendingActivity(reply, ["evidence"]), "buddy", "Completing another activity cannot unlock pairing.");
+  assert.equal(pendingActivity(reply, ["unrelated"]), "buddy", "An unknown completion cannot unlock pairing.");
   assert.equal(pendingActivity(reply, ["buddy"]), null);
   assert.equal(pendingActivity(reply, ["buddy", "buddy"]), null, "Duplicate completion is idempotent.");
   assert.deepEqual(reply.counts, sent.counts, "Attachment delivery does not award a second ethics answer.");
+  assert.equal(reduce(reply, { type: "send", text, time }), reply, "Double taps while an attachment is pending cannot submit another answer.");
   const continued = flush(reply);
   assert.equal(pendingActivity(continued, []), null, "A late completion cannot reopen an already delivered boundary.");
   assert.equal(activityAnchors(continued.messages).buddy, reply.messages.at(-1).id, "The anchor remains on Amir's response when the next prompt arrives.");
   const restarted = reduce(reply, { type: "restart" });
   assert.equal(pendingActivity(restarted, []), null);
   assert.deepEqual(activityAnchors(restarted.messages), {}, "Restart removes old attachment anchors.");
-}
-for (const text of [...steps[6].choices.map(choice => choice.text), "Saya mahu terus berbincang."]) {
-  const ready = beforeStep(6);
-  assert.equal(activityAnchors(ready.messages).evidence, undefined, "The missing-tool prompt does not reveal the record yet.");
-  const sent = reduce(ready, { type: "send", text, time });
-  const selectedReply = sent.queue[0];
-  assert.equal(pendingActivity(sent, ["buddy"]), "evidence", "Find evidence before the branch reveals where the tools were stored.");
-  assert.equal(activityAnchors(sent.messages).evidence, sent.messages.at(-1).id);
-  assert.equal(pendingActivity(sent, ["buddy", "buddy"]), "evidence", "Repeating the earlier completion cannot bypass the detective activity.");
-  assert.equal(pendingActivity(sent, ["evidence"]), null);
-  assert.equal(pendingActivity(sent, ["buddy", "evidence", "evidence"]), null);
-  assert.equal(reduce(sent, { type: "send", text, time }), sent, "Double taps while an attachment is pending cannot submit another answer.");
-  const continued = reduce(sent, { type: "advance", time });
-  assert.equal(continued.messages.at(-1).text, selectedReply.text, "The selected seventh answer still gets its own resolution.");
-  assert.equal(continued.messages.at(-1).sender, selectedReply.sender);
-  assert.equal(pendingActivity(continued, []), null, "The detective gate cannot recur after its branch response.");
-  assert.equal(activityAnchors(continued.messages).evidence, sent.messages.at(-1).id);
-  assert.deepEqual(continued.counts, sent.counts);
-  assert.equal(pendingActivity(reduce(sent, { type: "restart" }), []), null);
 }
 const completed = [];
 const visitedActivities = [];
@@ -173,13 +165,43 @@ while (withActivities.queue.length || withActivities.turn < steps.length) {
     withActivities = reduce(withActivities, { type: "send", text: steps[withActivities.turn].choices[0].text, time });
   }
 }
-assert.deepEqual(visitedActivities, ["buddy", "evidence"], "Both interactions occur once, in story order.");
-assert.deepEqual(withActivities, beforeStep(8), "Adding interactions preserves the original transcript, IDs, ending, and ethics profile.");
-assert.equal(pendingActivity(withActivities, []), null, "Neither interaction appears after the ending.");
-assert.equal(new Set(toolRecords.map(record => record.id)).size, toolRecords.length, "Record choices need unique identifiers.");
-assert.equal(toolRecords.filter(record => record.id === EVIDENCE_RECORD_ID).length, 1, "There is exactly one evidence row to share.");
-assert.match(toolRecords.find(record => record.id === EVIDENCE_RECORD_ID).text, /AJK.*kotak peralatan.*stor komuniti/, "The clue supports the existing resolution.");
-assert.ok(toolRecords.some(record => record.id !== EVIDENCE_RECORD_ID), "The detective card requires observing more than one record.");
+assert.deepEqual(visitedActivities, ["buddy"], "The team-arrangement interaction occurs exactly once.");
+assert.deepEqual(withActivities, beforeStep(6), "Adding the interaction preserves the original transcript, IDs, ending, and ethics profile.");
+assert.equal(pendingActivity(withActivities, []), null, "The interaction cannot appear after the ending.");
+
+// All four members can move independently; swapping slots inside a team must
+// keep the same partner response, while moving teams changes its proposal.
+function permutations(members) {
+  if (members.length === 0) return [[]];
+  return members.flatMap((member, index) => permutations(members.filter((_, i) => i !== index)).map(tail => [member, ...tail]));
+}
+const arrangements = permutations(["you", "amir", "aina", "lim"]);
+const arrangementOutcomes = new Set();
+assert.equal(arrangements.length, 24);
+for (const slots of arrangements) {
+  const snapshot = [...slots];
+  const result = resolveBuddyOutcome(slots);
+  arrangementOutcomes.add(result.action);
+  const ownTeamOffset = slots.indexOf("you") < 2 ? 0 : 2;
+  const ownTeam = slots.slice(ownTeamOffset, ownTeamOffset + 2);
+  const otherTeam = slots.filter(member => !ownTeam.includes(member));
+  assert.deepEqual(slots, snapshot, "Resolving the arrangement cannot move members.");
+  assert.deepEqual(new Set(result.otherPair), new Set(otherTeam), "The displayed other pair matches the actual slots.");
+  assert.equal(result.replies.length, 2, "Each submitted arrangement gets two relevant neighbor replies.");
+  assert.deepEqual(resolveBuddyOutcome([slots[1], slots[0], slots[3], slots[2]]), result, "Slot order inside each team does not change the outcome.");
+  assert.notEqual(resolveBuddyOutcome([...slots.slice(2), ...slots.slice(0, 2)]).action, result.action, "The sent proposal must name the teams actually chosen.");
+  const amirTeamOffset = slots.indexOf("amir") < 2 ? 0 : 2;
+  const amirPartner = slots.slice(amirTeamOffset, amirTeamOffset + 2).find(member => member !== "amir");
+  const amirReply = result.replies.find(reply => reply.sender === "amir");
+  assert.ok(amirReply, "Amir responds to every arrangement.");
+  if (amirPartner !== "you") {
+    assert.ok(result.replies.some(reply => reply.sender === amirPartner), "Amir's assigned partner replies to the proposal.");
+    assert.ok(amirReply.text.includes(people[amirPartner].name), "Amir thanks the person actually assigned beside him.");
+  } else {
+    assert.match(amirReply.text, /berganding dengan saya/, "Amir acknowledges pairing with the participant.");
+  }
+}
+assert.equal(arrangementOutcomes.size, 6, "Three partner combinations across two team positions have six distinct proposals.");
 
 // Verify ethics profiles: pure deontology, pure utilitarianism, pure care, and balanced tie.
 for (const lens of ["deontology", "utilitarianism", "care"]) {
@@ -188,14 +210,14 @@ for (const lens of ["deontology", "utilitarianism", "care"]) {
     const choice = steps[s.turn].choices.find(c => c.lens === lens);
     s = flush(reduce(s, { type: "send", text: choice.text, time }));
   }
-  assert.equal(s.counts[lens], 8);
+  assert.equal(s.counts[lens], 6);
   assert.equal(getEthicsProfile(s.counts).id, lens);
 }
-assert.equal(getEthicsProfile({ deontology: 3, utilitarianism: 3, care: 2 }).id, "balanced");
+assert.equal(getEthicsProfile({ deontology: 2, utilitarianism: 2, care: 2 }).id, "balanced");
 assert.equal(getEthicsProfile({ deontology: 0, utilitarianism: 0, care: 0 }).id, "balanced");
 
 // Every stage supports a neutral free-text fallback in the reducer.
-for (const freeTurn of [-1, 0, 1, 2, 3, 4, 5, 6, 7]) {
+for (const freeTurn of [-1, 0, 1, 2, 3, 4, 5]) {
   let s = flush(initialConversation());
   while (s.turn < steps.length) {
     const step = steps[s.turn];
@@ -205,8 +227,7 @@ for (const freeTurn of [-1, 0, 1, 2, 3, 4, 5, 6, 7]) {
     assert.deepEqual(sent.queue.slice(0, (useFreeText ? step.fallback : step.choices[1].replies).length), useFreeText ? step.fallback : step.choices[1].replies);
     s = flush(sent);
   }
-  assert.equal(s.turn, 8);
-  assert.deepEqual(s.ending, freeTurn === -1 || freeTurn === 7 ? null : steps[7].choices[1].ending);
+  assert.equal(s.turn, 6);
 }
 const matched = reduce(state, { type: "send", text: `  ${steps[0].choices[0].text}  `, time });
 assert.equal(matched.firstChoice, "rights");
@@ -222,13 +243,12 @@ const storyTexts = [
   ...opening.map(m => m.text),
   ...Object.values(openingReflections).map(m => m.text),
   ...Object.values(ethicsProfiles).flatMap(p => [p.title, p.summary]),
-  copy.endText,
   copy.endNote,
   ...steps.flatMap(step => [
     step.prompt.text,
     ...step.fallback.map(m => m.text),
     ...(step.transition ?? []).map(m => m.text),
-    ...step.choices.flatMap(c => [c.text, ...c.replies.map(m => m.text), ...(c.ending ? [c.ending.title, c.ending.text] : [])]),
+    ...step.choices.flatMap(c => [c.text, ...c.replies.map(m => m.text)]),
   ]),
 ];
 const socialTexts = [
@@ -257,5 +277,5 @@ function inspect(dir) {
   }
 }
 inspect("features/chat");
-console.log("PASS: contextual replies for every story message × 6 reactions, 8 semantic emoji replies, all 6561 eight-question routes, 24 distinct option responses, buddy/evidence gates for all choices and fallbacks, stable activity anchors, 3-lens ethics profile, 100% bilingual story/social/activity dictionary coverage, one Amir arrival after question 3, endings, Unicode limits, duplicate-send prevention, restart, viewport geometry, reduced motion, and no chat persistence.");
+console.log("PASS: contextual replies for every story message × 6 reactions, 8 semantic emoji replies, all 729 six-question routes, 18 distinct option responses, buddy gate for all choices and fallbacks, 24 team arrangements with six proposals, stable activity anchors, 3-lens ethics profile, 100% bilingual story/social/activity dictionary coverage, one Amir arrival after four debates, endings, Unicode limits, duplicate-send prevention, restart, viewport geometry, reduced motion, and no chat persistence.");
 

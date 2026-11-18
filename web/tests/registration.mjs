@@ -1,12 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { build } from "esbuild";
+import { importSource } from "./helpers.mjs";
 
-async function importSource(path) {
-  const result = await build({ entryPoints: [path], bundle: true, write: false, format: "esm", platform: "node" });
-  return import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString("base64")}`);
-}
 const { registerParticipant } = await importSource("features/registration/server.ts");
 const { normalizeStudentId } = await importSource("features/registration/validation.ts");
 assert.equal(normalizeStudentId("  ab-123  "),"AB-123");

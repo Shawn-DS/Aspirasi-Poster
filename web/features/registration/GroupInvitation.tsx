@@ -7,10 +7,12 @@ import { useChatViewport } from "../chat/hooks/useChatViewport";
 import ChatSimulator from "../chat/ChatSimulator";
 import { sound } from "../chat/lib/sound";
 import { MAX_STUDENT_ID_LENGTH, normalizeStudentId } from "./validation";
+import { useStatistics } from "../statistics/useStatistics";
 
 export default function GroupInvitation() {
   const [joined, setJoined] = useState(false);
-  return joined ? <ChatSimulator /> : <InvitationForm onJoined={() => setJoined(true)} />;
+  const statistics = useStatistics(joined);
+  return joined ? <ChatSimulator onAnswer={statistics.answer} onComplete={statistics.complete} statisticsState={statistics.state} onRetryStatistics={statistics.retry} /> : <InvitationForm onJoined={() => setJoined(true)} />;
 }
 
 function InvitationForm({ onJoined }: { onJoined: () => void }) {
@@ -142,7 +144,7 @@ function InvitationForm({ onJoined }: { onJoined: () => void }) {
         </div>
         <h1 id="invitation-title">{group.name}</h1>
         <p className="join-poster-sub">
-          Sertai perbualan komuniti dan terokai 8 dilema etika bersama jiran baharu kita, Amir.
+          Sertai perbualan komuniti dan terokai 6 dilema etika bersama jiran baharu kita, Amir.
         </p>
       </div>
 
@@ -172,7 +174,7 @@ function InvitationForm({ onJoined }: { onJoined: () => void }) {
           </button>
           <p id="join-privacy" className="join-dock-privacy">
             <LockKeyhole size={11} />
-            <span>Jawapan tidak disimpan</span>
+            <span>Student ID untuk kehadiran sahaja. Statistik pilihan dikongsi tanpa Student ID.</span>
           </p>
         </form>
 

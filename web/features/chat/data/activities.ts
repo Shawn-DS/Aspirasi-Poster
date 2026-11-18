@@ -1,6 +1,6 @@
 import type { MessageDraft, SenderId } from "../types";
 
-export type ActivityId = "buddy" | "evidence";
+export type ActivityId = "buddy";
 
 export const buddyOutcomes = {
   youAmir_team1: {
@@ -82,96 +82,17 @@ export const activityCopy = {
     confirm: "Cadangkan susunan ini",
     matched: "Cadangan dipersetujui: Pasukan gotong-royong telah disusun!",
     joined: "Semua ahli bersetuju dengan susunan pasukan ini!",
-    action: buddyOutcomes.youAmir_team1.action,
-    replies: buddyOutcomes.youAmir_team1.replies,
-  },
-  evidence: {
-    title: "Rakaman CCTV & rekod pondok",
-    intro: "Ini imej CCTV dan rekod di pondok hari ini. Ketik rekod di bawah untuk melihat apa sebenarnya berlaku kepada kotak peralatan.",
-    preview: "Buka imej CCTV · Cari bukti",
-    label: "Pondok Komuniti · Kamera CCTV 10:15",
-    hint: "Ketik rekod di bawah imej CCTV untuk memeriksa bukti.",
-    wrong: "Bahagian ini belum menjelaskan siapa yang mengalihkan kotak peralatan. Cuba periksa rekod lain.",
-    found: "Bukti CCTV ditemui: Pada 10:15, AJK memindahkan kotak peralatan ke stor komuniti manakala Amir sedang menyapu.",
-    share: "Kongsi bukti CCTV",
-    shared: "Bukti CCTV dikongsi",
-    close: "Tutup imej",
-    choose: "Pilih rekod bukti",
-    translate: "Translate",
-    closeTranslation: "Tutup terjemahan",
-    translateHint: "Terjemahan Bahasa Cina dan Bahasa Inggeris dipaparkan di bawah.",
-    action: "Rekod 10:15: AJK telah memindahkan kotak peralatan ke stor komuniti. Mari semak di sana dahulu.",
-    replies: [
-      { sender: "lim", text: "Catatan itu menjelaskan lokasi kotak. Saya tarik balik sangkaan terhadap Amir tadi." },
-      { sender: "amir", text: "Terima kasih kerana menyemak bukti dan memberi saya ruang untuk didengar." },
-    ] as MessageDraft[],
   },
   waiting: "Selesaikan aktiviti dalam sembang untuk meneruskan.",
   continue: "Lihat aktiviti",
 };
-
-export const toolRecords = [
-  { id: "setup", time: "08:00", text: "AJK meletakkan kotak peralatan di pondok." },
-  { id: "broom", time: "08:30", text: "Uncle Lim meminjam dua batang penyapu." },
-  { id: "storage", time: "10:15", text: "AJK memindahkan kotak peralatan ke stor komuniti." },
-  { id: "gloves", time: "10:20", text: "Puan Aina memulangkan sarung tangan." },
-] as const;
-
-export const EVIDENCE_RECORD_ID = "storage";
-
-// Full sentence translations for the Evidence CCTV modal when Translate is toggled ON.
-export const evidenceBilingual = {
-  title: {
-    zh: "社區涼亭 CCTV 監視畫面與紀錄",
-    en: "Community Gazebo CCTV Footage & Log",
-  },
-  hint: {
-    zh: "請點擊 CCTV 畫面下方的紀錄線索，找出工具箱真正的去向。",
-    en: "Tap the clue records below the CCTV image to find out what really happened to the equipment box.",
-  },
-  wrong: {
-    zh: "這個紀錄還沒說明是誰移走了工具箱。請點擊下方其他線索看看！",
-    en: "This record doesn't explain who moved the equipment box yet. Try inspecting another clue below!",
-  },
-  found: {
-    zh: "找到關鍵證據！10:15 的 CCTV 拍到是 AJK 委員將工具箱搬進社區儲藏室，而 Amir 當時正拿著掃帚在旁掃地，並未偷拿工具。",
-    en: "Key CCTV evidence found! At 10:15, an AJK committee member moved the equipment box to the community storeroom while Amir was sweeping nearby.",
-  },
-  share: {
-    zh: "分享 CCTV 證據到群組",
-    en: "Share CCTV Evidence",
-  },
-  records: {
-    setup: {
-      spot: "Meja Pondok",
-      zh: "08:00 — 委員會（AJK）早上將工具箱放在涼亭桌上（目前桌面已空）。",
-      en: "08:00 — AJK placed the equipment box on the gazebo table (now empty).",
-    },
-    broom: {
-      spot: "Amir & Penyapu",
-      zh: "08:30 — Uncle Lim 借了兩把掃帚；畫面中 Amir 兩手只拿著掃帚在掃地，沒有拿工具箱。",
-      en: "08:30 — Uncle Lim borrowed two brooms; CCTV shows Amir only holding a broom sweeping, not taking the box.",
-    },
-    storage: {
-      spot: "AJK & Stor Komuniti",
-      zh: "10:15 — 【關鍵證據】CCTV 拍到 AJK 委員抱著綠色工具箱搬往社區儲藏室（Stor）！",
-      en: "10:15 — [KEY PROOF] CCTV captured the AJK member carrying the green equipment box into the community storeroom!",
-    },
-    gloves: {
-      spot: "Bakul Sarung Tangan",
-      zh: "10:20 — Puan Aina 歸還了工作手套放在涼亭籃子裡。",
-      en: "10:20 — Puan Aina returned the work gloves to the basket.",
-    },
-  },
-} as const;
 
 // Explicit content export lets the dictionary check cover every attachment and reply.
 export const activityTexts = [
   ...Object.values(activityCopy).flatMap(value =>
     typeof value === "string"
       ? [value]
-      : Object.values(value).flatMap(item => (typeof item === "string" ? [item] : item.map(message => message.text)))
+      : Object.values(value)
   ),
   ...Object.values(buddyOutcomes).flatMap(outcome => [outcome.action, ...outcome.replies.map(r => r.text)]),
-  ...toolRecords.map(record => record.text),
 ];

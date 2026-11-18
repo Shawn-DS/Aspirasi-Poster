@@ -25,8 +25,6 @@ export function initialConversation(): ConversationState {
     nextId: 1,
     firstChoice: null,
     counts: { deontology: 0, utilitarianism: 0, care: 0 },
-    lastLens: null,
-    ending: null,
   };
 }
 
@@ -52,8 +50,6 @@ export function conversationReducer(state: ConversationState, action: Conversati
     turn,
     firstChoice,
     counts,
-    lastLens: choice?.lens ?? null,
-    ending: choice?.ending ?? null,
     nextId: state.nextId + 1,
     messages: [...state.messages, { id: state.nextId, sender: "you", text, time: action.time }],
     queue,
