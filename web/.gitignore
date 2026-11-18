@@ -1,0 +1,16 @@
+# Dependencies
+/node_modules
+
+# Build output and local tool state (regenerated automatically)
+/dist/
+/.next/
+/.vinext/
+/.wrangler/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets and logs
+.env*
+*.pem
+npm-debug.log*
+.DS_Store
