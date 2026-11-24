@@ -1,11 +1,9 @@
-import type { EthicsLens } from "../types";
-
 const THINKING_START = 5.2;
 const THINKING_END = 183.0;
 const COMPLETE_START = 184.8;
 const COMPLETE_END = 207.2;
 
-// Background music player (/bgm.mp3) + Web Audio synthesizer for ethical choice SFX.
+// Background music player (/bgm.mp3) + Web Audio synthesizer for subtle UI SFX.
 class SoundController {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -191,45 +189,24 @@ class SoundController {
     return this.muted;
   }
 
-  // Distinct SFX for each ethical framework
-  playChoiceSfx(lens: EthicsLens) {
+  // Subtle confirmation chime when sending a decision.
+  playChoiceSfx() {
     if (!this.ensureContext() || this.muted) return;
-    if (lens === "deontology") {
-      this.playTone(155, 0, 0.16, "triangle", 0.42, 62);
-      this.playTone(587.33, 0.02, 0.32, "sine", 0.22);
-      this.playTone(880.0, 0.05, 0.38, "sine", 0.18);
-    } else if (lens === "utilitarianism") {
-      const ripple = [523.25, 659.25, 783.99, 1046.5];
-      ripple.forEach((freq, i) => {
-        this.playTone(freq, i * 0.065, 0.28, "sine", 0.2);
-      });
-    } else if (lens === "care") {
-      this.playTone(196.0, 0, 0.14, "sine", 0.32, 140);
-      this.playTone(220.0, 0.14, 0.18, "sine", 0.34, 165);
-      this.playTone(523.25, 0.06, 0.42, "sine", 0.16);
-      this.playTone(659.25, 0.14, 0.45, "sine", 0.18);
-    }
+    this.playTone(523.25, 0, 0.16, "sine", 0.18);
+    this.playTone(659.25, 0.055, 0.22, "sine", 0.16);
   }
 
-  // Subtle bubble pop when a neighbour message arrives
+  // Subtle bubble pop when a colleague message arrives.
   playMessagePop() {
     if (!this.ctx || this.muted) return;
     this.playTone(540, 0, 0.055, "sine", 0.08, 760);
   }
 
-  // Cute pop when reacting to a message with an emoji
+  // Soft pop when reacting to a message with an emoji.
   playReactionPop() {
     if (!this.ensureContext() || this.muted) return;
     this.playTone(480, 0, 0.07, "sine", 0.16, 860);
     this.playTone(920, 0.05, 0.09, "triangle", 0.12, 1180);
-  }
-
-  // Playful boing + sparkle chime when tapping the ethics mascot
-  playMascotBoing() {
-    if (!this.ensureContext() || this.muted) return;
-    this.playTone(320, 0, 0.14, "sine", 0.22, 680);
-    this.playTone(659.25, 0.07, 0.16, "triangle", 0.16, 987.77);
-    this.playTone(1318.5, 0.13, 0.22, "sine", 0.14);
   }
 }
 

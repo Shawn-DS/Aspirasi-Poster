@@ -9,7 +9,7 @@ import {
   parseStatisticsEvent,
   STATISTICS_VERSION,
   statisticsCatalog,
-  statisticsLenses,
+  summarizeRankingCounts,
   type StatisticsEvent,
   type StatisticsSnapshot,
 } from "./catalog";
@@ -64,17 +64,19 @@ function csvField(value: string | number) {
 
 export function statisticsCsv(snapshot: StatisticsSnapshot) {
   const rows: Array<Array<string | number>> = [
-    ["version", "category", "question_id", "question", "choice_id", "choice", "lens", "count"],
-    [snapshot.version, "started", "", "", "", "", "", snapshot.started],
-    [snapshot.version, "completed", "", "", "", "", "", snapshot.completed],
+    ["version", "category", "question_id", "question", "choice_id", "choice", "count"],
+    [snapshot.version, "started", "", "", "", "", snapshot.started],
+    [snapshot.version, "completed", "", "", "", "", snapshot.completed],
   ];
   for (const question of snapshot.questions) {
-    rows.push([snapshot.version, "question_total", question.id, question.title, "", "", "", question.total]);
+    rows.push([snapshot.version, "question_total", question.id, question.title, "", "", question.total]);
     for (const choice of question.choices) {
-      rows.push([snapshot.version, "answer", question.id, question.title, choice.id, choice.label, choice.lens, choice.count]);
+      rows.push([snapshot.version, "answer", question.id, question.title, choice.id, choice.label, choice.count]);
     }
   }
-  for (const lens of snapshot.lenses) rows.push([snapshot.version, "lens", "", "", "", lens.label, lens.id, lens.count]);
+  for (const item of snapshot.rankingSummary) {
+    rows.push([snapshot.version, "ranking_first", "s4-ranking", "Fasa 4 · Susunan Keutamaan", item.id, item.label, item.firstCount]);
+  }
   return `\uFEFF${rows.map(row => row.map(csvField).join(",")).join("\r\n")}\r\n`;
 }
 
@@ -88,19 +90,35 @@ export async function readStatistics(request: Request, db?: D1Database): Promise
     const counters = new Map(rows.results.map(row => [row.counter_key, row.count]));
     const count = (key: string) => counters.get(`${STATISTICS_VERSION}:${key}`) ?? 0;
     const questions = statisticsCatalog.map(question => {
-      const choices = question.choices.map(choice => ({ ...choice, count: count(`answer:${question.id}:${choice.id}`) }));
-      return { id: question.id, title: question.title, total: choices.reduce((sum, choice) => sum + choice.count, 0), choices };
+      const choices = question.choices.map(choice => ({
+        ...choice,
+        count: count(`answer:${question.id}:${choice.id}`),
+      }));
+      return {
+        id: question.id,
+        title: question.title,
+        shortTitle: question.shortTitle,
+        total: choices.reduce((sum, choice) => sum + choice.count, 0),
+        choices,
+      };
     });
+    const rankingQuestion = questions.find(q => q.id === "s4-ranking");
+    const rankingSummary = summarizeRankingCounts(rankingQuestion?.choices ?? []);
     const snapshot: StatisticsSnapshot = {
       version: STATISTICS_VERSION,
-      started: count("start"), completed: count("complete"), questions,
-      lenses: statisticsLenses.map(lens => ({ ...lens, count: questions.reduce((sum, question) =>
-        sum + question.choices.filter(choice => choice.lens === lens.id).reduce((total, choice) => total + choice.count, 0), 0) })),
+      started: count("start"),
+      completed: count("complete"),
+      questions,
+      rankingSummary,
     };
     if (new URL(request.url).searchParams.get("format") === "csv") {
-      return new Response(statisticsCsv(snapshot), { headers: { ...NO_STORE_HEADERS,
-        "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="statistik-peluang-kedua.csv"',
-      } });
+      return new Response(statisticsCsv(snapshot), {
+        headers: {
+          ...NO_STORE_HEADERS,
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": 'attachment; filename="statistik-peluang-kedua.csv"',
+        },
+      });
     }
     return jsonReply(200, snapshot);
   } catch {

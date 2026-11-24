@@ -1,17 +1,15 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { Download, RefreshCw, Users } from "lucide-react";
+import { BarChart3, RefreshCw, Trophy } from "lucide-react";
 import {
   STATISTICS_VERSION,
   statisticsCatalog,
-  statisticsLenses,
   type StatisticsSnapshot,
 } from "./catalog";
 import { roundedPercentages } from "./statisticsPresentation";
 import "./statistics.css";
 
-const colors = ["#147567", "#d49442", "#a35b78"];
 const numberFormat = new Intl.NumberFormat("ms-MY", { maximumFractionDigits: 1 });
 const formatNumber = (value: number) => numberFormat.format(value);
 
@@ -21,21 +19,32 @@ function isSnapshot(value: unknown): value is StatisticsSnapshot {
   const validCount = (count: unknown) => Number.isSafeInteger(count) && Number(count) >= 0;
   const validChoice = (choice: unknown) => {
     if (!choice || typeof choice !== "object") return false;
-    const item = choice as { id?: unknown; label?: unknown; count?: unknown };
-    return typeof item.id === "string" && typeof item.label === "string" && validCount(item.count);
+    const item = choice as { id?: unknown; label?: unknown; short?: unknown; count?: unknown };
+    return typeof item.id === "string" && typeof item.label === "string" && typeof item.short === "string" && validCount(item.count);
   };
-  return snapshot.version === STATISTICS_VERSION && validCount(snapshot.started) && validCount(snapshot.completed)
-    && Array.isArray(snapshot.lenses) && snapshot.lenses.length === statisticsLenses.length && snapshot.lenses.every(validChoice)
-    && Array.isArray(snapshot.questions) && snapshot.questions.length === statisticsCatalog.length
-    && snapshot.questions.every((question, index) => question && typeof question.id === "string"
-      && typeof question.title === "string" && validCount(question.total)
-      && Array.isArray(question.choices) && question.choices.length === statisticsCatalog[index].choices.length
-      && question.choices.every(validChoice));
+  return (
+    snapshot.version === STATISTICS_VERSION &&
+    validCount(snapshot.started) &&
+    validCount(snapshot.completed) &&
+    Array.isArray(snapshot.questions) &&
+    snapshot.questions.length === statisticsCatalog.length &&
+    snapshot.questions.every(
+      (question, index) =>
+        question &&
+        typeof question.id === "string" &&
+        typeof question.title === "string" &&
+        validCount(question.total) &&
+        Array.isArray(question.choices) &&
+        question.choices.length === statisticsCatalog[index].choices.length &&
+        question.choices.every(validChoice),
+    ) &&
+    Array.isArray(snapshot.rankingSummary) &&
+    snapshot.rankingSummary.length === 3
+  );
 }
 
-export default function StatisticsDashboard({ refreshKey = 0 }: { refreshKey?: number }) {
+export default function StatisticsDashboard({ refreshKey = 0, compact = false }: { refreshKey?: number; compact?: boolean }) {
   const [snapshot, setSnapshot] = useState<StatisticsSnapshot | null>(null);
-  const [selected, setSelected] = useState<string>("overall");
   const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -68,22 +77,28 @@ export default function StatisticsDashboard({ refreshKey = 0 }: { refreshKey?: n
     };
   }, [refreshKey, revision]);
 
-  const question = snapshot?.questions.find((item) => item.id === selected);
-  const slices = question?.choices ?? snapshot?.lenses ?? [];
-  const total = slices.reduce((sum, slice) => sum + slice.count, 0);
-  const percentages = roundedPercentages(slices.map((slice) => slice.count));
-  const title = question?.title ?? "Perspektif etika komuniti";
-  const refresh = () => setRevision((current) => current + 1);
+  const refresh = () => setRevision(current => current + 1);
+  const decisionPhases = snapshot ? snapshot.questions.slice(0, 3) : [];
+  const sortedRanking = snapshot
+    ? [...snapshot.rankingSummary].sort((a, b) => {
+        if (b.firstCount !== a.firstCount) return b.firstCount - a.firstCount;
+        if (a.averageRank === null && b.averageRank === null) return 0;
+        if (a.averageRank === null) return 1;
+        if (b.averageRank === null) return -1;
+        return a.averageRank - b.averageRank;
+      })
+    : [];
+  const rankingTotal = sortedRanking.reduce((sum, item) => sum + item.firstCount, 0);
+  const firstPcts = roundedPercentages(sortedRanking.map(item => item.firstCount));
 
   return (
-    <section className="statistics-dashboard" aria-labelledby={`${sectionId}-heading`}>
+    <section className={`statistics-dashboard${compact ? " is-compact" : ""}`} aria-labelledby={`${sectionId}-heading`}>
       <header className="statistics-heading">
-        <span className="statistics-symbol" aria-hidden="true"><Users size={22} /></span>
-        <div>
-          <p className="statistics-kicker">TAMAN HARMONI</p>
-          <h2 id={`${sectionId}-heading`}>Pilihan komuniti</h2>
-          <p className="statistics-subtitle">Statistik tanpa nama atau nombor pelajar.</p>
-        </div>
+        <span className="statistics-symbol" aria-hidden="true"><BarChart3 size={20} /></span>
+        <h2 id={`${sectionId}-heading`}>Pilihan semua peserta</h2>
+        {snapshot && (
+          <span className="statistics-count-pill">{formatNumber(snapshot.completed)} sesi</span>
+        )}
       </header>
 
       {failed && (
@@ -99,53 +114,61 @@ export default function StatisticsDashboard({ refreshKey = 0 }: { refreshKey?: n
 
       {snapshot && (
         <>
-          <dl className="statistics-totals">
-            <div><dt>Sesi bermula</dt><dd>{formatNumber(snapshot.started)}</dd></div>
-            <div><dt>Sesi selesai</dt><dd>{formatNumber(snapshot.completed)}</dd></div>
-          </dl>
+          {/* Vertical Bar Comparison: Stage 1 -> Stage 2 -> Stage 3 */}
+          <div className="statistics-panel" aria-busy={loading}>
+            <div className="statistics-panel-head">
+              <h3>Beri temu duga (Fasa 1 → 3)</h3>
+            </div>
 
-          <div className="statistics-selector" role="group" aria-label="Pilih carta statistik">
-            <button type="button" aria-pressed={!question} onClick={() => setSelected("overall")}>Keseluruhan</button>
-            {snapshot.questions.map((item, index) => (
-              <button type="button" key={item.id} aria-label={`Dilema ${index + 1}`} aria-pressed={selected === item.id} onClick={() => setSelected(item.id)}>{index + 1}</button>
-            ))}
+            <div className="statistics-barchart" role="list" aria-label="Carta palang kadar beri temu duga">
+              {decisionPhases.map((phase, index) => {
+                const interviewChoice = phase.choices.find(c => c.id === "interview");
+                const declineChoice = phase.choices.find(c => c.id === "decline");
+                const pcts = roundedPercentages([interviewChoice?.count ?? 0, declineChoice?.count ?? 0]);
+                const yesPct = pcts[0] ?? 0;
+                const phaseLabels = ["Fasa 1\nAwal", "Fasa 2\n+ Sijil", "Fasa 3\n+ Risiko"];
+                return (
+                  <div key={phase.id} className={`barchart-col col-${index + 1}`} role="listitem">
+                    <span className="barchart-value">{formatNumber(yesPct)}%</span>
+                    <div className="barchart-track" aria-hidden="true">
+                      <div className="barchart-fill" style={{ height: `${Math.max(phase.total > 0 ? 6 : 0, yesPct)}%` }} />
+                    </div>
+                    <span className="barchart-label">{phaseLabels[index]}</span>
+                    <small className="barchart-count">{formatNumber(interviewChoice?.count ?? 0)} / {formatNumber(phase.total)}</small>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="statistics-chart-panel" aria-busy={loading}>
-            <h3 id={`${sectionId}-chart-heading`}>{title}</h3>
-            <figure className="statistics-figure" aria-labelledby={`${sectionId}-chart-heading`}>
-              <div className="statistics-doughnut">
-                <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
-                  <circle cx="60" cy="60" r="46" fill="none" stroke="#e5eadd" strokeWidth="18" />
-                  {slices.map((slice, index) => {
-                    if (!slice.count || !total) return null;
-                    const before = slices.slice(0, index).reduce((sum, entry) => sum + entry.count, 0);
-                    return <circle key={slice.id} cx="60" cy="60" r="46" fill="none" stroke={colors[index % colors.length]} strokeWidth="18" pathLength="100" strokeDasharray={`${slice.count / total * 100} 100`} strokeDashoffset={-before / total * 100} transform="rotate(-90 60 60)" />;
-                  })}
-                </svg>
-                <div className="statistics-chart-total"><strong>{formatNumber(total)}</strong><span>jawapan</span></div>
-              </div>
-              <figcaption>
-                {total === 0 ? "Belum ada jawapan untuk carta ini." : question ? "Berdasarkan jawapan yang diterima untuk dilema ini." : "Berdasarkan semua jawapan yang diterima, bukan bilangan peserta."}
-              </figcaption>
-            </figure>
+          {/* Stage 4: #1 Priority Share */}
+          <div className="statistics-panel statistics-ranking-panel" aria-busy={loading}>
+            <div className="statistics-panel-head">
+              <h3><Trophy size={15} aria-hidden="true" /> Pilihan #1 keutamaan</h3>
+            </div>
 
-            <ul className={`statistics-legend${question ? " statistics-legend-choices" : ""}`} aria-label="Butiran carta">
-              {slices.map((slice, index) => (
-                <li key={slice.id}>
-                  <span className="statistics-swatch" style={{ backgroundColor: colors[index % colors.length] }} aria-hidden="true">{question ? String.fromCharCode(65 + index) : ""}</span>
-                  <div><span className="statistics-legend-label">{slice.label}</span><small>{formatNumber(slice.count)} jawapan</small></div>
-                  <strong>{slice.count > 0 && percentages[index] === 0 ? "<0.1" : formatNumber(percentages[index])}%</strong>
-                </li>
-              ))}
+            <ul className="statistics-ranking-list" aria-label="Peratusan pilihan #1 peserta">
+              {sortedRanking.map((item, index) => {
+                const pct = firstPcts[index] ?? 0;
+                return (
+                  <li key={item.id}>
+                    <div className="ranking-stat-head">
+                      <strong>{item.short}</strong>
+                      <span className="ranking-avg-badge">{formatNumber(pct)}%</span>
+                    </div>
+                    <div className="ranking-bar-track" role="img" aria-label={`${item.short}: ${formatNumber(pct)}%`}>
+                      {rankingTotal > 0 && item.firstCount > 0 ? (
+                        <span className="rk-1" style={{ width: `${(item.firstCount / rankingTotal) * 100}%` }} />
+                      ) : (
+                        <span className="split-empty" />
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
-          <p className="statistics-note">Pilihan yang terkumpul; bukan penilaian peribadi.</p>
-          <footer className="statistics-actions">
-            <button type="button" onClick={refresh} disabled={loading}><RefreshCw size={16} aria-hidden="true" /><span>{loading ? "Mengemas kini…" : "Muat semula"}</span></button>
-            <a href="/api/statistics?format=csv" download><Download size={16} aria-hidden="true" /><span>Muat turun CSV</span></a>
-          </footer>
           <p className="statistics-live" role="status">{loading ? "Statistik sedang dikemas kini." : ""}</p>
         </>
       )}

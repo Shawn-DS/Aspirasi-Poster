@@ -6,14 +6,12 @@ import { importSource } from "./helpers.mjs";
 
 const { recordStatistics, readStatistics, statisticsCsv } = await importSource("features/statistics/server.ts");
 const { STATISTICS_VERSION, statisticsCatalog } = await importSource("features/statistics/catalog.ts");
-assert.equal(STATISTICS_VERSION, "ethics-six-v1");
-assert.equal(statisticsCatalog.length, 6);
-assert(statisticsCatalog.every(question => question.choices.length === 3));
+assert.equal(STATISTICS_VERSION, "employer-visual-v1");
+assert.equal(statisticsCatalog.length, 4);
+assert.deepEqual(statisticsCatalog.map(q => q.choices.length), [2, 2, 2, 6]);
 
 const sqlite = new DatabaseSync(":memory:");
 for (const file of readdirSync("drizzle").filter(name => name.endsWith(".sql")).sort()) sqlite.exec(readFileSync(`drizzle/${file}`, "utf8"));
-// This adapter executes real SQLite statements with the same transaction
-// boundary as D1 batch, including changes() and rollback on any SQL failure.
 function prepared(query, args = []) {
   return { query, args,
     bind: (...values) => prepared(query, values),
@@ -46,26 +44,28 @@ const snapshot = async () => {
   return response.json();
 };
 
-// Empty data must include every choice/lens and be distinguishable from outage.
+// Empty data must include all 4 questions + 3 ranking summary items.
 let data = await snapshot();
 assert.equal(data.started, 0);
 assert.equal(data.completed, 0);
-assert.equal(data.questions.length, 6);
+assert.equal(data.questions.length, 4);
 assert(data.questions.every(question => question.total === 0 && question.choices.every(choice => choice.count === 0)));
-assert.deepEqual(data.lenses.map(lens => lens.count), [0, 0, 0]);
+assert.equal(data.rankingSummary.length, 3);
+assert(data.rankingSummary.every(item => item.total === 0 && item.averageRank === null));
 assert.equal((await readStatistics(get())).status, 503);
 assert.equal((await recordStatistics(req(event("start")))).status, 503);
 
 const q1 = statisticsCatalog[0];
+const q4 = statisticsCatalog[3];
 for (const invalid of [
   null, [], 123, {}, event("unknown"),
-  event("start", { version: "old-story" }), event("start", { eventId: "student123" }),
+  event("start", { version: "employer-four-v1" }), event("start", { eventId: "student123" }),
   event("start", { eventId: "00000000-0000-0000-0000-000000000000" }),
   event("start", { studentId: "AB123" }), event("start", { sessionId: randomUUID() }),
   event("start", { questionId: q1.id }), event("complete", { choiceId: q1.choices[0].id }),
   event("answer"), event("answer", { questionId: q1.id, choiceId: "unknown" }),
-  event("answer", { questionId: q1.id, choiceId: statisticsCatalog[1].choices[0].id }),
-  event("answer", { questionId: "deleted-cctv", choiceId: "evidence" }),
+  event("answer", { questionId: q1.id, choiceId: q4.choices[0].id }),
+  event("answer", { questionId: "q1-interview", choiceId: "q1-interview" }),
   event("answer", { questionId: q1.id, choiceId: q1.choices[0].id, timestamp: Date.now() }),
 ]) assert.equal((await recordStatistics(req(invalid), binding)).status, 400);
 assert.equal((await recordStatistics(req("{broken"), binding)).status, 400);
@@ -86,8 +86,7 @@ const streamed = new Request(`${origin}/api/statistics`, { method: "POST", heade
 assert.equal((await recordStatistics(streamed, binding)).status, 413);
 assert.equal(receiptCount(), 0);
 
-// Repeated and overlapping requests increment once; even differently cased UUIDs
-// and conflicting retries cannot create another answer under that same receipt.
+// Concurrent/repeated writes dedupe atomically.
 const started = event("start");
 for (const response of await Promise.all(Array.from({ length: 12 }, () => recordStatistics(req(started), binding)))) {
   assert.equal(response.status, 200);
@@ -100,20 +99,30 @@ assert.equal(receiptCount(), 1);
 data = await snapshot();
 assert.equal(data.started, 1);
 assert.equal(data.completed, 0);
+
 const firstAnswer = event("answer", { questionId: q1.id, choiceId: q1.choices[0].id });
 await Promise.all(Array.from({ length: 20 }, () => recordStatistics(req(firstAnswer), binding)));
 assert.equal((await snapshot()).questions[0].choices[0].count, 1);
+
 const allChoices = statisticsCatalog.flatMap(question => question.choices.map(choice => event("answer", { questionId: question.id, choiceId: choice.id })));
 for (const answer of allChoices) assert.equal((await recordStatistics(req(answer), binding)).status, 200);
 assert.equal((await recordStatistics(req(event("complete")), binding)).status, 200);
 data = await snapshot();
 assert.equal(data.completed, 1);
-assert.equal(data.questions[0].total, 4);
-assert(data.questions.slice(1).every(question => question.total === 3));
-assert.equal(data.lenses.reduce((sum, lens) => sum + lens.count, 0), 19);
-assert.deepEqual(data.lenses.map(lens => lens.count), [7, 6, 6]);
+assert.equal(data.questions[0].total, 3);
+assert.equal(data.questions[1].total, 2);
+assert.equal(data.questions[2].total, 2);
+assert.equal(data.questions[3].total, 6);
+// All 6 permutations voted once -> each item gets 2 firsts, 2 seconds, 2 thirds -> average rank 2.
+for (const item of data.rankingSummary) {
+  assert.equal(item.firstCount, 2);
+  assert.equal(item.secondCount, 2);
+  assert.equal(item.thirdCount, 2);
+  assert.equal(item.total, 6);
+  assert.equal(item.averageRank, 2);
+}
 
-// A failed second statement rolls the receipt back; retry can therefore succeed.
+// Atomic rollback on failure.
 const beforeFailure = receiptCount();
 const retryAfterFailure = event("start");
 sqlite.exec("CREATE TRIGGER fail_counter BEFORE INSERT ON statistics_counters BEGIN SELECT RAISE(ABORT, 'private database details'); END;");
@@ -125,6 +134,7 @@ sqlite.exec("DROP TRIGGER fail_counter;");
 assert.equal((await recordStatistics(req(retryAfterFailure), binding)).status, 200);
 assert.equal(receiptCount(), beforeFailure + 1);
 assert.equal((await snapshot()).started, 2);
+
 const brokenBinding = { prepare() { throw new Error("sensitive internal details"); } };
 for (const response of [await readStatistics(get(), brokenBinding), await recordStatistics(req(event("start")), brokenBinding)]) {
   assert.equal(response.status, 503);
@@ -133,7 +143,7 @@ for (const response of [await readStatistics(get(), brokenBinding), await record
 }
 assert.equal((await readStatistics(get(), { prepare: () => ({ bind: () => ({ all: async () => ({ success: false, results: [] }) }) }) })).status, 503);
 
-// Attendance and aggregates have no relation; receipts contain one hash column.
+// Attendance & receipts privacy boundary + CSV export.
 assert.deepEqual(sqlite.prepare("PRAGMA table_info(statistics_receipts)").all().map(column => column.name), ["receipt_hash"]);
 assert.deepEqual(sqlite.prepare("PRAGMA table_info(statistics_counters)").all().map(column => column.name), ["counter_key", "count"]);
 for (const table of ["statistics_receipts", "statistics_counters"]) assert.equal(sqlite.prepare(`PRAGMA foreign_key_list(${table})`).all().length, 0);
@@ -150,15 +160,14 @@ assert.match(exported.headers.get("content-disposition"), /attachment/);
 assert.match(exported.headers.get("content-type"), /text\/csv/);
 const csv = await exported.text();
 assert.doesNotMatch(csv, /PRIVATE-ATTENDANCE-ONLY|student_id|joined_at|receipt_hash|eventId/);
-assert.equal(csv.trim().split("\r\n").length, 30);
-assert.match(csv, /"started","","","","","","2"/);
+// 1 header + started + completed + 4 question_totals + (2+2+2+6=12) answers + 3 ranking_first = 22 lines
+assert.equal(csv.trim().split("\r\n").length, 22);
+assert.match(csv, /"started","","","","","2"/);
 const escaped = structuredClone(await snapshot());
 escaped.questions[0].title = '=HYPERLINK("https://evil.example")';
 escaped.questions[0].choices[0].label = 'quoted "label", with\nnewline';
-escaped.lenses[0].label = "\t+formula";
 const safeCsv = statisticsCsv(escaped);
 assert(safeCsv.includes('"\'=HYPERLINK(""https://evil.example"")"'));
 assert(safeCsv.includes('"quoted ""label"", with\nnewline"'));
-assert(safeCsv.includes('"\'\t+formula"'));
 sqlite.close();
-console.log("PASS: anonymous aggregate schema, 18 options, strict payloads, same-origin/bounded writes, atomic SQLite retry dedupe and rollback, safe failures, zero snapshots, and attendance-free escaped CSV.");
+console.log("PASS: anonymous aggregate schema (employer-visual-v1), 3 binary phases + 6 ranking permutations, rankingSummary averages, atomic SQLite dedupe/rollback, safe failures, and attendance-free escaped CSV.");

@@ -25,6 +25,9 @@ const memoryStorage = (initial = null) => {
   };
 };
 const create = options => createStatisticsClient({ uuid, deliver: async () => {}, ...options });
+const questionCount = statisticsCatalog.length;
+const totalEvents = questionCount + 2;
+const expectedKinds = ["start", ...Array(questionCount).fill("answer"), "complete"];
 const answerAll = client => statisticsCatalog.forEach(question => client.answer(question.id, question.choices[0].id));
 
 // The Wi-Fi HTTP preview still needs secure random receipt IDs on phones that
@@ -52,29 +55,29 @@ const answerAll = client => statisticsCatalog.forEach(question => client.answer(
   assert.equal(sent.length, 0, "No events before joining.");
   client.start(); client.start();
   client.answer("not-a-question", "not-a-choice");
-  client.answer(statisticsCatalog[0].id, statisticsCatalog[1].choices[0].id);
+  client.answer(statisticsCatalog[0].id, statisticsCatalog.at(-1).choices[0].id);
   assert.equal(client.snapshot().pending, 1, "Invalid and mismatched choices must not be queued.");
   for (const question of statisticsCatalog.slice(0, -1)) {
     client.answer(question.id, question.choices[0].id);
     client.answer(question.id, question.choices[1].id);
   }
   client.complete();
-  assert.equal(storage.read().includes('"kind":"complete"'), false, "Completion waits for all six answers.");
+  assert.equal(storage.read().includes('"kind":"complete"'), false, "Completion waits for all answers.");
   const final = statisticsCatalog.at(-1);
   client.answer(final.id, final.choices[0].id);
   client.complete(); client.complete();
   await settled(client);
-  assert.deepEqual(sent.map(event => event.kind), ["start", ...Array(6).fill("answer"), "complete"]);
+  assert.deepEqual(sent.map(event => event.kind), expectedKinds);
   assert.deepEqual(sent.filter(event => event.kind === "answer").map(event => event.choiceId), statisticsCatalog.map(question => question.choices[0].id));
-  assert.equal(new Set(sent.map(event => event.eventId)).size, 8, "Events have independent random IDs, without a shared participant ID.");
-  assert.deepEqual(client.snapshot(), { pending: 0, syncing: false, error: false, revision: 8 });
+  assert.equal(new Set(sent.map(event => event.eventId)).size, totalEvents, "Events have independent random IDs, without a shared participant ID.");
+  assert.deepEqual(client.snapshot(), { pending: 0, syncing: false, error: false, revision: totalEvents });
   const acknowledged = JSON.parse(storage.read());
-  assert.equal(Object.keys(acknowledged).length, 8);
+  assert.equal(Object.keys(acknowledged).length, totalEvents);
   assert.ok(Object.values(acknowledged).every(value => value === true), "Successful delivery removes answer bodies from the browser store.");
   client.start();
-  for (const question of statisticsCatalog) client.answer(question.id, question.choices[2].id);
+  for (const question of statisticsCatalog) client.answer(question.id, question.choices.at(-1).id);
   client.complete(); await settled(client);
-  assert.equal(sent.length, 8, "Replay cannot inflate counts or replace first answers.");
+  assert.equal(sent.length, totalEvents, "Replay cannot inflate counts or replace first answers.");
   for (const value of [JSON.stringify(sent), ...storage.writes]) {
     assert.doesNotMatch(value, /studentId|student_id|transcript|message|sessionId|participantId|joinedAt|timestamp/i);
     for (const question of statisticsCatalog) {
@@ -121,16 +124,16 @@ const answerAll = client => statisticsCatalog.forEach(question => client.answer(
   offline.start(); answerAll(offline); offline.complete();
   await settled(offline);
   const pending = JSON.parse(storage.read());
-  assert.equal(offline.snapshot().pending, 8);
+  assert.equal(offline.snapshot().pending, totalEvents);
   const delivered = [];
   const resumed = create({ storage, deliver: async event => { delivered.push(structuredClone(event)); } });
   resumed.start(); await settled(resumed);
   assert.deepEqual(delivered.map(event => event.eventId), Object.values(pending).map(event => event.eventId));
-  assert.deepEqual(delivered.map(event => event.kind), ["start", ...Array(6).fill("answer"), "complete"]);
+  assert.deepEqual(delivered.map(event => event.kind), expectedKinds);
   const afterRefresh = create({ storage, deliver: async event => { delivered.push(structuredClone(event)); } });
   afterRefresh.start(); answerAll(afterRefresh); afterRefresh.complete();
   await settled(afterRefresh);
-  assert.equal(delivered.length, 8);
+  assert.equal(delivered.length, totalEvents);
 }
 
 // Storage rejection, invalid JSON, unrecognised slots, and forged/extra event
@@ -147,7 +150,7 @@ const answerAll = client => statisticsCatalog.forEach(question => client.answer(
     JSON.stringify({ start: { ...validStart, kind: "unknown" } }),
     JSON.stringify({ start: validAnswer }),
     JSON.stringify({ [`answer:${first.id}`]: { ...validAnswer, choiceId: "invalid" } }),
-    JSON.stringify({ [`answer:${first.id}`]: { ...validAnswer, choiceId: statisticsCatalog[1].choices[0].id } }),
+    JSON.stringify({ [`answer:${first.id}`]: { ...validAnswer, choiceId: statisticsCatalog.at(-1).choices[0].id } }),
     JSON.stringify({ [`answer:${first.id}`]: { ...validAnswer, transcript: "FORBIDDEN" } }),
     JSON.stringify({ unknown: validStart, studentId: "FORBIDDEN", "answer:unknown": validAnswer }),
   ];
@@ -162,10 +165,10 @@ const answerAll = client => statisticsCatalog.forEach(question => client.answer(
   }
   const blocked = create({ storage: { getItem() { throw new Error("Denied"); }, setItem() { throw new Error("Quota"); } } });
   blocked.start(); answerAll(blocked); blocked.complete(); await settled(blocked);
-  assert.equal(blocked.snapshot().revision, 8);
+  assert.equal(blocked.snapshot().revision, totalEvents);
   const memoryOnly = create();
   memoryOnly.start(); answerAll(memoryOnly); memoryOnly.complete(); await settled(memoryOnly);
-  assert.equal(memoryOnly.snapshot().revision, 8);
+  assert.equal(memoryOnly.snapshot().revision, totalEvents);
 }
 
 // Keep one in-flight flush, then include events enqueued during that pass.
@@ -184,7 +187,7 @@ const answerAll = client => statisticsCatalog.forEach(question => client.answer(
   answerAll(client); client.complete();
   assert.equal(sent.length, 1);
   release(); await settled(client);
-  assert.equal(sent.length, 8);
+  assert.equal(sent.length, totalEvents);
   assert.equal(maximum, 1);
 }
 

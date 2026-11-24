@@ -1,38 +1,52 @@
-export type SenderId = "aina" | "lim" | "admin" | "amir" | "you" | "system";
-export type MessageDraft = { sender: SenderId; text: string };
-export type ChatMessage = MessageDraft & { id: number; time: string };
-export type EthicsLens = "deontology" | "utilitarianism" | "care";
-export type EthicsProfileId = EthicsLens | "balanced";
-export type EthicsCounts = Record<EthicsLens, number>;
-export type EthicsProfile = {
-  id: EthicsProfileId;
+export type DecisionValue = "interview" | "decline";
+export type PriorityItemId = "law" | "safety" | "rehab";
+export type RankingChoiceId =
+  | "law-safety-rehab"
+  | "law-rehab-safety"
+  | "safety-law-rehab"
+  | "safety-rehab-law"
+  | "rehab-law-safety"
+  | "rehab-safety-law";
+
+export type DecisionStageId = "s1-blind" | "s2-certificate" | "s3-risk";
+export type QuestionId = DecisionStageId | "s4-ranking";
+export type SimulationPhase = DecisionStageId | "s4-ranking" | "result";
+
+export type DecisionChoiceOption = {
+  id: DecisionValue;
+  label: string;
+  subtitle: string;
+};
+
+export type DecisionStage = {
+  id: DecisionStageId;
+  stepNumber: 1 | 2 | 3;
   badge: string;
-  title: string;
-  summary: string;
+  shortTitle: string;
+  revealTag?: string;
+  revealDetail?: string;
+  revealTone?: "condition" | "risk";
+  narrative: string;
+  question: string;
+  choices: [DecisionChoiceOption, DecisionChoiceOption];
 };
-export type ReplyChoice = {
-  id: string;
-  text: string;
-  lens: EthicsLens;
-  replies: MessageDraft[];
+
+export type PriorityItem = {
+  id: PriorityItemId;
+  label: string;
+  short: string;
+  hint: string;
 };
-export type StoryStep = {
-  id: string;
-  title: string;
-  prompt: MessageDraft;
-  choices: ReplyChoice[];
-  fallback: MessageDraft[];
-  transition?: MessageDraft[];
+
+export type SimulationState = {
+  phase: SimulationPhase;
+  decisions: Record<DecisionStageId, DecisionValue | null>;
+  ranking: [PriorityItemId, PriorityItemId, PriorityItemId];
+  rankingSubmitted: boolean;
 };
-export type ConversationState = {
-  messages: ChatMessage[];
-  queue: MessageDraft[];
-  turn: number;
-  nextId: number;
-  firstChoice: string | null;
-  counts: EthicsCounts;
-};
-export type ConversationAction =
-  | { type: "advance"; time: string }
-  | { type: "send"; text: string; time: string }
+
+export type SimulationAction =
+  | { type: "decide"; value: DecisionValue }
+  | { type: "set-ranking"; order: [PriorityItemId, PriorityItemId, PriorityItemId] }
+  | { type: "submit-ranking" }
   | { type: "restart" };
