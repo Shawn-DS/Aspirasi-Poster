@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { BarChart3, RefreshCw, Trophy } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import {
   STATISTICS_VERSION,
   statisticsCatalog,
@@ -94,7 +94,6 @@ export default function StatisticsDashboard({ refreshKey = 0, compact = false }:
   return (
     <section className={`statistics-dashboard${compact ? " is-compact" : ""}`} aria-labelledby={`${sectionId}-heading`}>
       <header className="statistics-heading">
-        <span className="statistics-symbol" aria-hidden="true"><BarChart3 size={20} /></span>
         <h2 id={`${sectionId}-heading`}>Pilihan semua peserta</h2>
         {snapshot && (
           <span className="statistics-count-pill">{formatNumber(snapshot.completed)} sesi</span>
@@ -114,11 +113,9 @@ export default function StatisticsDashboard({ refreshKey = 0, compact = false }:
 
       {snapshot && (
         <>
-          {/* Vertical Bar Comparison: Stage 1 -> Stage 2 -> Stage 3 */}
-          <div className="statistics-panel" aria-busy={loading}>
-            <div className="statistics-panel-head">
-              <h3>Beri temu duga (Fasa 1 → 3)</h3>
-            </div>
+          {/* Primary Visual Focus: Interview Approval Across Stages 1 -> 3 */}
+          <div className="statistics-section is-primary" aria-busy={loading}>
+            <h3>Beri temu duga · Fasa 1 → 3</h3>
 
             <div className="statistics-barchart" role="list" aria-label="Carta palang kadar beri temu duga">
               {decisionPhases.map((phase, index) => {
@@ -126,12 +123,12 @@ export default function StatisticsDashboard({ refreshKey = 0, compact = false }:
                 const declineChoice = phase.choices.find(c => c.id === "decline");
                 const pcts = roundedPercentages([interviewChoice?.count ?? 0, declineChoice?.count ?? 0]);
                 const yesPct = pcts[0] ?? 0;
-                const phaseLabels = ["Fasa 1\nAwal", "Fasa 2\n+ Sijil", "Fasa 3\n+ Risiko"];
+                const phaseLabels = ["Awal", "+ Sijil", "+ Risiko"];
                 return (
                   <div key={phase.id} className={`barchart-col col-${index + 1}`} role="listitem">
                     <span className="barchart-value">{formatNumber(yesPct)}%</span>
                     <div className="barchart-track" aria-hidden="true">
-                      <div className="barchart-fill" style={{ height: `${Math.max(phase.total > 0 ? 6 : 0, yesPct)}%` }} />
+                      <div className="barchart-fill" style={{ height: `${Math.max(phase.total > 0 ? 8 : 0, yesPct)}%` }} />
                     </div>
                     <span className="barchart-label">{phaseLabels[index]}</span>
                     <small className="barchart-count">{formatNumber(interviewChoice?.count ?? 0)} / {formatNumber(phase.total)}</small>
@@ -141,24 +138,22 @@ export default function StatisticsDashboard({ refreshKey = 0, compact = false }:
             </div>
           </div>
 
-          {/* Stage 4: #1 Priority Share */}
-          <div className="statistics-panel statistics-ranking-panel" aria-busy={loading}>
-            <div className="statistics-panel-head">
-              <h3><Trophy size={15} aria-hidden="true" /> Pilihan #1 keutamaan</h3>
-            </div>
+          {/* Secondary Section: #1 Priority Distribution */}
+          <div className="statistics-section is-secondary" aria-busy={loading}>
+            <h3>Keutamaan #1 peserta</h3>
 
             <ul className="statistics-ranking-list" aria-label="Peratusan pilihan #1 peserta">
               {sortedRanking.map((item, index) => {
                 const pct = firstPcts[index] ?? 0;
                 return (
-                  <li key={item.id}>
+                  <li key={item.id} className={index === 0 ? "is-leader" : undefined}>
                     <div className="ranking-stat-head">
                       <strong>{item.short}</strong>
-                      <span className="ranking-avg-badge">{formatNumber(pct)}%</span>
+                      <span className="ranking-pct">{formatNumber(pct)}%</span>
                     </div>
                     <div className="ranking-bar-track" role="img" aria-label={`${item.short}: ${formatNumber(pct)}%`}>
                       {rankingTotal > 0 && item.firstCount > 0 ? (
-                        <span className="rk-1" style={{ width: `${(item.firstCount / rankingTotal) * 100}%` }} />
+                        <span className="rk-fill" style={{ width: `${(item.firstCount / rankingTotal) * 100}%` }} />
                       ) : (
                         <span className="split-empty" />
                       )}

@@ -96,7 +96,7 @@ const uiTexts = [
   "Kekal",
   "Beri",
   "Tidak",
-  "Susunan keutamaan anda",
+  "Keutamaan anda",
   copy.resultTitle,
   rankingStage.narrative,
   rankingStage.question,

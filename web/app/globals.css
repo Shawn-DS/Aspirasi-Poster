@@ -987,13 +987,13 @@ svg {
   box-shadow: 0 1px 0 var(--ink);
 }
 
-/* Stage 5 Result View — Concise Personal Summary */
+/* Stage 5 Result View — Clear Sub (Personal Recap) vs Main (Audience Stats) Hierarchy */
 .sim-result-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 12px 12px max(22px, env(safe-area-inset-bottom));
+  padding: 12px 13px max(22px, env(safe-area-inset-bottom));
   background-color: var(--paper);
   background-image:
     radial-gradient(ellipse at 12% 10%, #f5d5bc55 0%, transparent 48%),
@@ -1004,11 +1004,11 @@ svg {
 
 .decision-summary-card {
   margin: 0 0 12px;
-  padding: 14px 13px 13px;
-  border: 2.5px solid var(--ink);
-  background: var(--card);
+  padding: 13px 14px;
+  border: 2px solid #7d695e;
+  background: #f8f1e4;
   border-radius: 20px;
-  box-shadow: 0 5px 0 #dfd0bc;
+  box-shadow: 0 3px 0 #dfd0bc;
   animation: stage-enter 0.26s ease-out;
 }
 
@@ -1017,47 +1017,48 @@ svg {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 11px;
+  margin-bottom: 10px;
 }
 
 .decision-summary-head h2 {
   font-family: var(--display);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   line-height: 1.2;
   color: var(--ink);
 }
 
 .decision-change-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: inline-block;
   font-family: var(--display);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 800;
   padding: 3px 10px;
   border-radius: 999px;
-  border: 2px solid var(--ink);
+  border: 1.5px solid var(--ink);
+  box-shadow: 0 2px 0 #d5c1a5;
   flex-shrink: 0;
+  color: var(--ink);
 }
 
 .decision-change-badge.is-changed {
   background: var(--butter);
-  color: var(--ink);
 }
 
 .decision-change-badge.is-steady {
   background: #d8edd7;
-  color: var(--ink);
 }
 
 .decision-journey {
   list-style: none;
-  margin: 0 0 10px;
-  padding: 0;
+  margin: 0 0 11px;
+  padding: 8px 4px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
+  background: var(--card);
+  border: 1.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 2px 0 #e2d3be;
 }
 
 .decision-step {
@@ -1065,68 +1066,52 @@ svg {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 4px;
-  padding: 8px 6px;
-  border-radius: 13px;
-  background: #fdf9f1;
-  border: 2px solid var(--ink);
+  gap: 2px;
+  padding: 2px 6px;
   min-width: 0;
 }
 
-.decision-step.variant-interview {
-  background: #e8f5e7;
-}
-
-.decision-step.variant-decline {
-  background: #fcebe5;
+.decision-step + .decision-step {
+  border-left: 1px solid #e7dac7;
 }
 
 .decision-step-label {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--muted);
-  font-weight: 800;
-  line-height: 1.2;
+  font-weight: 700;
+  line-height: 1.25;
   white-space: nowrap;
 }
 
 .decision-step-choice {
-  display: inline-block;
+  display: block;
   font-family: var(--display);
-  font-size: 13.5px;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: 14.5px;
+  font-weight: 800;
+  line-height: 1.25;
   color: var(--ink);
-  padding: 2px 9px;
-  border-radius: 999px;
-  border: 1.5px solid var(--ink);
-  background: var(--card);
 }
 
 .variant-interview .decision-step-choice {
-  background: var(--sage);
-  color: var(--card);
+  color: #366e43;
 }
 
 .variant-decline .decision-step-choice {
-  background: var(--coral);
-  color: var(--card);
+  color: #b44432;
 }
 
 .decision-ranking-summary {
-  padding: 11px;
-  border-radius: 16px;
-  background: #fdf9f0;
-  border: 2px solid var(--ink);
-  box-shadow: 0 3px 0 #e2d3be;
+  padding: 2px 2px 0;
 }
 
 .decision-ranking-kicker {
   display: block;
-  font-family: var(--display);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink);
-  margin-bottom: 8px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
 }
 
 .decision-ranking-pills {
@@ -1134,59 +1119,36 @@ svg {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .summary-rank-row {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 7px 10px;
-  border-radius: 12px;
-  border: 2px solid var(--ink);
-  background: var(--card);
-}
-
-.summary-rank-row.rank-1 {
-  background: #eaf6e8;
-}
-
-.summary-rank-row.rank-2 {
-  background: #fff9e8;
-}
-
-.summary-rank-row.rank-3 {
-  background: #fdf2ee;
+  gap: 8px;
 }
 
 .summary-rank-num {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 2px solid var(--ink);
+  border: 1.5px solid #9d897b;
   display: grid;
   place-items: center;
   font-family: var(--display);
-  font-size: 12.5px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 800;
   flex-shrink: 0;
-  color: var(--ink);
-  background: var(--card);
+  color: var(--muted);
+  background: #f2e5d0;
 }
 
 .summary-rank-row.rank-1 .summary-rank-num {
+  width: 23px;
+  height: 23px;
   background: var(--sage);
   color: var(--card);
-}
-
-.summary-rank-row.rank-2 .summary-rank-num {
-  background: var(--butter);
-  color: var(--ink);
-}
-
-.summary-rank-row.rank-3 .summary-rank-num {
-  background: var(--coral);
-  color: var(--card);
+  border-color: var(--ink);
 }
 
 .summary-rank-label {
@@ -1194,9 +1156,15 @@ svg {
   min-width: 0;
   flex: 1;
   font-family: var(--display);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 700;
   line-height: 1.25;
+  color: var(--muted);
+}
+
+.summary-rank-row.rank-1 .summary-rank-label {
+  font-size: 13.5px;
+  font-weight: 800;
   color: var(--ink);
 }
 
@@ -1669,13 +1637,13 @@ svg {
   .ranker-item { min-height: 46px; padding: 8px 10px; gap: 9px; }
   .ranker-num { width: 29px; height: 29px; font-size: 13.5px; }
   .ranker-label { font-size: 13px; }
-  .decision-summary-card { padding: 12px 10px; }
-  .decision-journey { gap: 5px; }
-  .decision-step { padding: 7px 4px; }
-  .decision-step-label { font-size: 9.5px; }
-  .decision-step-choice { font-size: 12px; padding: 2px 7px; }
-  .summary-rank-row { padding: 6px 8px; gap: 7px; }
+  .decision-summary-card { padding: 11px; }
+  .decision-journey { padding: 7px 2px; }
+  .decision-step { padding: 2px 4px; }
+  .decision-step-label { font-size: 10px; }
+  .decision-step-choice { font-size: 13.5px; }
   .summary-rank-label { font-size: 12px; }
+  .summary-rank-row.rank-1 .summary-rank-label { font-size: 12.5px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

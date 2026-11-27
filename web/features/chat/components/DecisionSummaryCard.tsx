@@ -1,5 +1,4 @@
 "use client";
-import { CheckCircle2 } from "lucide-react";
 import type { WordLookupResult } from "../data/dictionary";
 import { copy, priorityItemMap } from "../data/story";
 import { decisionChangeStatus } from "../lib/simulation";
@@ -28,9 +27,9 @@ export default function DecisionSummaryCard({
   const changedAny = decisionChangeStatus(s1, s2) === "changed" || decisionChangeStatus(s2, s3) === "changed";
 
   const rounds = [
-    { key: "s1", label: "1 · Awal", value: s1 },
-    { key: "s2", label: "2 · + Sijil", value: s2 },
-    { key: "s3", label: "3 · + Risiko", value: s3 },
+    { key: "s1", label: "Awal", value: s1 },
+    { key: "s2", label: "+ Sijil", value: s2 },
+    { key: "s3", label: "+ Risiko", value: s3 },
   ];
 
   return (
@@ -45,15 +44,12 @@ export default function DecisionSummaryCard({
           />
         </h2>
         <span className={`decision-change-badge${changedAny ? " is-changed" : " is-steady"}`}>
-          <CheckCircle2 size={13} aria-hidden="true" />
-          <span>
-            <TranslatableText
-              text={changedAny ? "Berubah" : "Kekal"}
-              prefixId="sum-badge"
-              activeId={activeWordId}
-              onSelectWord={onSelectWord}
-            />
-          </span>
+          <TranslatableText
+            text={changedAny ? "Berubah" : "Kekal"}
+            prefixId="sum-badge"
+            activeId={activeWordId}
+            onSelectWord={onSelectWord}
+          />
         </span>
       </div>
 
@@ -75,7 +71,7 @@ export default function DecisionSummaryCard({
 
       <div className="decision-ranking-summary">
         <span className="decision-ranking-kicker">
-          <TranslatableText text="Susunan keutamaan anda" prefixId="sum-rank-hdr" activeId={activeWordId} onSelectWord={onSelectWord} />
+          <TranslatableText text="Keutamaan anda" prefixId="sum-rank-hdr" activeId={activeWordId} onSelectWord={onSelectWord} />
         </span>
         <ol className="decision-ranking-pills">
           {ranking.map((itemId, index) => (
@@ -83,7 +79,7 @@ export default function DecisionSummaryCard({
               <span className="summary-rank-num" aria-hidden="true">{index + 1}</span>
               <strong className="summary-rank-label">
                 <TranslatableText
-                  text={priorityItemMap[itemId].label}
+                  text={priorityItemMap[itemId].short}
                   prefixId={`sum-rank-${itemId}`}
                   activeId={activeWordId}
                   onSelectWord={onSelectWord}
